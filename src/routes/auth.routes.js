@@ -142,7 +142,6 @@ router.post("/admin-login", AdminLogin);
 router.get("/admin-dashboard", getUserStats);
 // router.get('/listing',fetchListing)
 // router.get('/listingdetail/:id',fetchDetailListing)
-router.get("/numUser", getUserStats);
 router.get("/user", getAllUsers);
 router.patch("/:id/verify", verifyUser);
 // router.get('/profile/:id',getCurrentUserProfile)

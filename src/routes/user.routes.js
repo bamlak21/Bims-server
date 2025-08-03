@@ -9,7 +9,6 @@ import {
 } from "../controllers/user.controller.js";
 const router = Router();
 
-router.get("/numUser", getUserStats);
 router.get("/userStats", getAllUsers);
 router.get("/profile/:id", getCurrentUserProfile);
 
@@ -158,6 +157,8 @@ router.patch("/update", UpdateUserProfile);
  */
 
 router.get("/getall", fetchAllUsers);
+
+router.get("/userstats", getUserStats);
 
 /**
  * @swagger
