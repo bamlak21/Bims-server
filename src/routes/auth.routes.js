@@ -8,7 +8,6 @@ import {
   //   fetchDetailListing,
   getAllUsers,
   verifyUser,
-  //   fetchAllUsers,
   //   getCurrentUserProfile,
   //   getVerifiedBrokers,
   //   submitListing,
