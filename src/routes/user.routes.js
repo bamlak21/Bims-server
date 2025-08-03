@@ -4,6 +4,7 @@ import {
   getAllUsers,
   getCurrentUserProfile,
   UpdateUserProfile,
+  deactivateUser,
 } from "../controllers/user.controller.js";
 const router = Router();
 
@@ -98,5 +99,7 @@ router.get("/profile/:id", getCurrentUserProfile);
  */
 
 router.patch("/update", UpdateUserProfile);
+
+router.patch("/deactivate/:id", deactivateUser);
 
 export default router;

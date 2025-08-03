@@ -13,7 +13,7 @@ import {
   //   getVerifiedBrokers,
   //   submitListing,
   //   updateUserProfile,
-  //   deactivateUser,
+  deactivateUser,
 } from "../controllers/auth.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 
@@ -152,7 +152,6 @@ router.patch("/:id/verify", verifyUser);
 // router.get('/brokers/verified', getVerifiedBrokers);
 // router.post('/listings/submit', submitListing);
 // router.put('/user/:id',updateUserProfile);
-// router.patch('/deactivate/:id', deactivateUser);
 // router.get("/listings", GetListings)
 // router.get('/user-profile', GetUserProfile);
 export default router;
