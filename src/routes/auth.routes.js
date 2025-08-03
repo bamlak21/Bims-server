@@ -13,7 +13,6 @@ import {
   //   getVerifiedBrokers,
   //   submitListing,
   //   updateUserProfile,
-  deactivateUser,
 } from "../controllers/auth.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 
