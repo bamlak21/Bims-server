@@ -158,6 +158,48 @@ router.patch("/update", UpdateUserProfile);
 
 router.get("/getall", fetchAllUsers);
 
+/**
+ * @swagger
+ * /api/users/userstats:
+ *   get:
+ *     summary: Get user statistics (brokers, clients, owners)
+ *     tags:
+ *       - User
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalUsers:
+ *                   type: integer
+ *                   example: 150
+ *                 pendingBrokers:
+ *                   type: integer
+ *                   example: 10
+ *                 verifiedBrokers:
+ *                   type: integer
+ *                   example: 25
+ *                 totalClients:
+ *                   type: integer
+ *                   example: 80
+ *                 totalOwners:
+ *                   type: integer
+ *                   example: 35
+ *       500:
+ *         description: Server error while fetching user statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
+
 router.get("/userstats", getUserStats);
 
 /**
