@@ -130,29 +130,59 @@ export const fetchListing = async (req, res) => {
     const { type, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    let vehicle = [];
-    let property = [];
-
-    if (!type || type === "vehicle") {
-      vehicle = await Vehicle.find()
+    // If type is specified, return only that type
+    if (type === "vehicle") {
+      const vehicle = await Vehicle.find()
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(Number(limit))
         .lean();
+
+      return res.status(200).json({
+        message: "Vehicle listings fetched successfully",
+        listings: vehicle,
+        pagination: { page: Number(page), limit: Number(limit) },
+      });
     }
 
-    if (!type || type === "property") {
-      property = await Property.find()
+    if (type === "property") {
+      const property = await Property.find()
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(Number(limit))
         .lean();
+
+      return res.status(200).json({
+        message: "Property listings fetched successfully",
+        listings: property,
+        pagination: { page: Number(page), limit: Number(limit) },
+      });
     }
+
+    // If no type is specified, fetch both and combine
+    const vehicle = await Vehicle.find()
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    const property = await Property.find()
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    // Combine both and sort by created_at
+    const listings = [
+      ...vehicle.map((v) => ({ ...v, listingType: "vehicle" })),
+      ...property.map((p) => ({ ...p, listingType: "property" })),
+    ];
+
+    listings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return res.status(200).json({
       message: "Listings fetched successfully",
-      vehicle,
-      property,
+      listings,
       pagination: { page: Number(page), limit: Number(limit) },
     });
   } catch (err) {
