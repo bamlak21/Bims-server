@@ -1,0 +1,46 @@
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import authRouter from "./routes/auth.routes.js";
+import userRouter from "./routes/user.routes.js";
+import listingRouter from "./routes/listing.route.js"
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import { swaggerOptions } from "./config/swaggerConfig.js";
+import cors from "cors";
+
+
+dotenv.config({ quiet: true });
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
+
+
+const app = express();
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use(express.json());
+
+app.use(cors({
+  origin: '*', // or '*', for all origins (not recommended for production)
+  credentials: true
+}));
+app.use("/api/auth", authRouter);
+app.use("/api/user",userRouter);
+app.use("/api/listing",listingRouter)
+app.use('/uploads', express.static('uploads'));
+async function StartServer() {
+  try {
+    await mongoose
+      .connect(process.env.MONGO_URL)
+      .then(() => console.log("MongoDB Connected!!"));
+
+    app.listen(process.env.PORT, () => {
+      console.log(`Server Running on port: ${process.env.PORT}`);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+StartServer();
+
