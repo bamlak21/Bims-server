@@ -308,16 +308,6 @@ export const verifyUser = async (req, res) => {
 //   }
 // };
 
-// export const fetchAllUsers = async (req, res) => {
-//   try {
-//     const users = await User.find(); // Adjust this line as needed
-//     res.json(users);
-//   } catch (err) {
-//     console.error("Error fetching users:", err);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
-
 // export const getVerifiedBrokers = async (req, res) => {
 //        try {
 //          const brokers = await User.find({ userType: 'broker', verified: true }).select('_id firstName lastName email');

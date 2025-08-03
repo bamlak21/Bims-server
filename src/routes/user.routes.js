@@ -5,6 +5,7 @@ import {
   getCurrentUserProfile,
   UpdateUserProfile,
   deactivateUser,
+  fetchAllUsers,
 } from "../controllers/user.controller.js";
 const router = Router();
 
@@ -99,6 +100,8 @@ router.get("/profile/:id", getCurrentUserProfile);
  */
 
 router.patch("/update", UpdateUserProfile);
+
+router.get("/getall", fetchAllUsers);
 
 router.patch("/deactivate/:id", deactivateUser);
 

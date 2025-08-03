@@ -147,7 +147,6 @@ router.get("/numUser", getUserStats);
 router.get("/user", getAllUsers);
 router.patch("/:id/verify", verifyUser);
 // router.get('/profile/:id',getCurrentUserProfile)
-// router.get('/doc',fetchAllUsers)
 // router.get('/brokers/verified', getVerifiedBrokers);
 // router.post('/listings/submit', submitListing);
 // router.put('/user/:id',updateUserProfile);

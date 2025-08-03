@@ -125,6 +125,16 @@ export const UpdateUserProfile = async (req, res) => {
   }
 };
 
+export const fetchAllUsers = async (req, res) => {
+  try {
+    const users = await User.find(); // Adjust this line as needed
+    res.json(users);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const deactivateUser = async (req, res) => {
   const { id } = req.params;
   const { isActive } = req.body;
