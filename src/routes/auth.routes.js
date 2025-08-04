@@ -146,7 +146,7 @@ router.get("/user", getAllUsers);
 
 /**
  * @swagger
- * /users/{id}/verify:
+ * /auth/{id}/verify:
  *   patch:
  *     summary: Verify or reject a user
  *     description: Updates a user's verification status and document review details.
