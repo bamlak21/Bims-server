@@ -183,7 +183,7 @@ export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [vehicles, property] = Promise.all([
+    const [vehicles, property] = await Promise.all([
       Vehicle.countDocuments({ owner_id: id }),
       Property.countDocuments({ owner_id: id }),
     ]);
