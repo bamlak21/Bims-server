@@ -8,19 +8,16 @@ export const CreateListing = async (req, res) => {
     description,
     category,
     price,
-    make,
-    model,
-    year,
-    mileage,
-    transmission,
-    fuelType,
-    condition,
+    vehicleSpecs,
     owner_id,
     status,
     location,
     specifications,
     rejection_reason,
   } = req.body;
+
+    const parsedSpecifications = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;
+    const parsedVehicleSpecs = typeof vehicleSpecs === 'string' ? JSON.parse(vehicleSpecs) : vehicleSpecs;
 
   if (!type) return res.status(400).json({ message: "Missing listing type" });
 
@@ -34,13 +31,7 @@ export const CreateListing = async (req, res) => {
       !description ||
       !category ||
       !price ||
-      !make ||
-      !model ||
-      !year ||
-      !mileage ||
-      !transmission ||
-      !fuelType ||
-      !condition ||
+      !vehicleSpecs||
       !owner_id ||
       !status)
   ) {
@@ -48,13 +39,12 @@ export const CreateListing = async (req, res) => {
   }
 
   if (
-    type !== "vehicle" &&
+    type === "property" &&
     (!title ||
       !description ||
       !category ||
       !price ||
       !specifications ||
-      !condition ||
       !owner_id ||
       !status ||
       !location)
@@ -65,24 +55,24 @@ export const CreateListing = async (req, res) => {
   }
 
   const imagePaths = req.files.map((file) => file.path.replace(/\\/g, "/"));
-  const formattedLocation = location
-    ? {
-        city: location.city,
-        subcity: location.subcity,
-        woreda: location.woreda,
-        address: location.address,
-      }
-    : null;
-  const formattedSpecifications = specifications
-    ? {
-        bedrooms: specifications.bedrooms,
-        bathrooms: specifications.bathrooms,
-        area: specifications.area,
-        yearBuilt: specifications.yearBuilt,
-        condition: specifications.condition,
-        swimmingPool: specifications.swimmingPool,
-      }
-    : null;
+  // const formattedLocation = location
+  //   ? {
+  //       city: location.city,
+  //       subcity: location.subcity,
+  //       woreda: location.woreda,
+  //       address: location.address,
+  //     }
+  //   : null;
+  // const formattedSpecifications = specifications
+  //   ? {
+  //       bedrooms: specifications.bedrooms,
+  //       bathrooms: specifications.bathrooms,
+  //       area: specifications.area,
+  //       yearBuilt: specifications.yearBuilt,
+  //       condition: specifications.condition,
+  //       swimmingPool: specifications.swimmingPool,
+  //     }
+  //   : null;
 
   try {
     const listing =
@@ -92,13 +82,7 @@ export const CreateListing = async (req, res) => {
             description,
             category,
             price,
-            make,
-            model,
-            year,
-            mileage,
-            transmission,
-            fuelType,
-            condition,
+            vehicleSpecs:parsedVehicleSpecs,
             owner_id,
             status,
             image_paths: imagePaths,
@@ -109,7 +93,7 @@ export const CreateListing = async (req, res) => {
             category,
             price,
             location: formattedLocation,
-            specifications: formattedSpecifications,
+            specifications: parsedSpecifications,
             image_paths: imagePaths,
             owner_id,
             status,
