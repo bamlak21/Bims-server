@@ -143,6 +143,66 @@ router.get("/admin-dashboard", getUserStats);
 // router.get('/listing',fetchListing)
 // router.get('/listingdetail/:id',fetchDetailListing)
 router.get("/user", getAllUsers);
+
+/**
+ * @swagger
+ * /users/{id}/verify:
+ *   patch:
+ *     summary: Verify or reject a user
+ *     description: Updates a user's verification status and document review details.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the user to verify.
+ *         schema:
+ *           type: string
+ *           example: 64a87b82f3e8d9e1c8f9a4a2
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               verified:
+ *                 type: boolean
+ *                 description: Whether the user is verified (true = approved, false = rejected).
+ *                 example: true
+ *               reviewedBy:
+ *                 type: string
+ *                 description: ID or name of the admin reviewing the document.
+ *                 example: admin123
+ *     responses:
+ *       200:
+ *         description: User verification status updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
 router.patch("/:id/verify", verifyUser);
 // router.get('/profile/:id',getCurrentUserProfile)
 // router.get('/brokers/verified', getVerifiedBrokers);
