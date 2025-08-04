@@ -146,6 +146,48 @@ const router = Router();
  */
 
 router.post("/create", upload.array("images", 5), CreateListing);
+
+/**
+ * @swagger
+ * /api/listing/fetchlist/{id}:
+ *   get:
+ *     summary: Get count of listings by broker ID
+ *     description: Returns the total number of listings associated with a specific broker.
+ *     tags:
+ *       - Listings
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Broker ID whose listing count you want to fetch.
+ *         schema:
+ *           type: string
+ *           example: "64f2a1b9e8a7d4f1c2b12345"
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the listing count.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 broker_id:
+ *                   type: string
+ *                   example: "64f2a1b9e8a7d4f1c2b12345"
+ *                 count:
+ *                   type: integer
+ *                   example: 15
+ *       500:
+ *         description: Internal Server Error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
 router.get("/fetchlist/:id", fetchListingCount);
 
 /**
