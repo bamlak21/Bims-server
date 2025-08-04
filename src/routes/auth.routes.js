@@ -151,7 +151,7 @@ router.get("/user", getAllUsers);
  *     summary: Verify or reject a user
  *     description: Updates a user's verification status and document review details.
  *     tags:
- *       - Users
+ *       - Authentication
  *     parameters:
  *       - in: path
  *         name: id
