@@ -151,42 +151,40 @@ router.post("/create", upload.array("images", 5), CreateListing);
  * @swagger
  * /api/listing/fetchlist/{id}:
  *   get:
- *     summary: Get count of listings by broker ID
- *     description: Returns the total number of listings associated with a specific broker.
+ *     summary: Get total count of listings (vehicles + properties) for an owner
+ *     description: Returns the total number of vehicle and property listings associated with a specific owner.
  *     tags:
  *       - Listings
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: Broker ID whose listing count you want to fetch.
+ *         description: Owner ID whose listing count you want to fetch.
  *         schema:
  *           type: string
  *           example: "64f2a1b9e8a7d4f1c2b12345"
  *     responses:
  *       200:
- *         description: Successfully retrieved the listing count.
+ *         description: Successfully retrieved the listing counts.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 broker_id:
+ *                 owner_id:
  *                   type: string
  *                   example: "64f2a1b9e8a7d4f1c2b12345"
- *                 count:
+ *                 vehicles:
  *                   type: integer
- *                   example: 15
+ *                   example: 8
+ *                 properties:
+ *                   type: integer
+ *                   example: 6
+ *                 total:
+ *                   type: integer
+ *                   example: 14
  *       500:
  *         description: Internal Server Error.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Internal Server Error
  */
 router.get("/fetchlist/:id", fetchListingCount);
 

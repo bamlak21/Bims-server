@@ -16,8 +16,12 @@ export const CreateListing = async (req, res) => {
     rejection_reason,
   } = req.body;
 
-    const parsedSpecifications = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;
-    const parsedVehicleSpecs = typeof vehicleSpecs === 'string' ? JSON.parse(vehicleSpecs) : vehicleSpecs;
+  const parsedSpecifications =
+    typeof specifications === "string"
+      ? JSON.parse(specifications)
+      : specifications;
+  const parsedVehicleSpecs =
+    typeof vehicleSpecs === "string" ? JSON.parse(vehicleSpecs) : vehicleSpecs;
 
   if (!type) return res.status(400).json({ message: "Missing listing type" });
 
@@ -31,7 +35,7 @@ export const CreateListing = async (req, res) => {
       !description ||
       !category ||
       !price ||
-      !vehicleSpecs||
+      !vehicleSpecs ||
       !owner_id ||
       !status)
   ) {
@@ -82,7 +86,7 @@ export const CreateListing = async (req, res) => {
             description,
             category,
             price,
-            vehicleSpecs:parsedVehicleSpecs,
+            vehicleSpecs: parsedVehicleSpecs,
             owner_id,
             status,
             image_paths: imagePaths,
@@ -179,11 +183,17 @@ export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const count = await Listings.countDocuments({ broker_id: id });
-    res.json({ broker_id: id, count });
+    const [vehicles, property] = Promise.all([
+      Vehicle.countDocuments({ owner_id: id }),
+      Property.countDocuments({ owner_id: id }),
+    ]);
+
+    return res
+      .status(200)
+      .json({ owner_id: id, vehicles, property, total: vehicles + property });
   } catch (err) {
-    console.error("Error counting listings:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.log("Error counting listings:", err);
+    return res.status(500).json({ message: "Server Error" });
   }
 };
 
