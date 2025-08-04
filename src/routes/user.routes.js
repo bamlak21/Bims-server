@@ -102,7 +102,7 @@ router.patch("/update", UpdateUserProfile);
 
 /**
  * @swagger
- * /api/users/getall:
+ * /api/user/getall:
  *   get:
  *     summary: Fetch all users
  *     tags:
@@ -160,7 +160,7 @@ router.get("/getall", fetchAllUsers);
 
 /**
  * @swagger
- * /api/users/userstats:
+ * /api/user/userstats:
  *   get:
  *     summary: Get user statistics (brokers, clients, owners)
  *     tags:
@@ -204,7 +204,7 @@ router.get("/userstats", getUserStats);
 
 /**
  * @swagger
- * /api/users/deactivate/{id}:
+ * /api/user/deactivate/{id}:
  *   patch:
  *     summary: Deactivate or activate a user
  *     tags:
