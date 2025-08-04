@@ -39,4 +39,4 @@ const PropertySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Property = mongoose.model("Listing", PropertySchema);
+export const Property = mongoose.model("Property", PropertySchema);
