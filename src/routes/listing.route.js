@@ -192,26 +192,8 @@ router.get("/fetchlist/:id", fetchListingCount);
  * @swagger
  * /api/listing/fetch:
  *   get:
- *     summary: Fetch listings (vehicles, properties, or both combined)
- *     description: >
- *       This endpoint retrieves listings of vehicles and properties.
- *
- *       **Behavior:**
- *       - If `type` is **not provided**, the response returns a **combined array of both vehicles and properties** sorted by `created_at` (newest first).
- *       - If `type=vehicle`, only vehicle listings will be returned.
- *       - If `type=property`, only property listings will be returned.
- *
- *       **Pagination:**
- *       - Use the `page` and `limit` query parameters to control pagination.
- *       - `page` determines which set of results is returned (e.g., page 2 gives the next set of results).
- *       - `limit` defines how many listings are returned per page.
- *       - The `pagination` object in the response includes the current `page` and `limit` values for reference.
- *
- *       Example:
- *       - `GET /api/listing/fetch?page=1&limit=5` → Returns the first 5 listings.
- *       - `GET /api/listing/fetch?page=2&limit=5` → Returns listings 6–10.
- *
- *       The response always includes the `listingType` field to indicate whether an item is a vehicle or a property when combined.
+ *     summary: Fetch vehicle, property, or both listings
+ *     description: Fetches listings based on type (`vehicle`, `property`, or `all`), includes owner details, and supports pagination.
  *     tags:
  *       - Listings
  *     parameters:
@@ -219,26 +201,26 @@ router.get("/fetchlist/:id", fetchListingCount);
  *         name: type
  *         schema:
  *           type: string
- *           enum: [vehicle, property]
- *         description: Filter listings by type. If omitted, both vehicle and property listings are returned in a single combined array.
- *         example: vehicle
+ *           enum: [vehicle, property, all]
+ *           default: all
+ *         description: The type of listings to fetch.
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number for pagination. Defaults to `1`.
- *         example: 2
+ *           minimum: 1
+ *         description: Page number for pagination.
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of listings per page. Defaults to `10`.
- *         example: 5
+ *           minimum: 1
+ *         description: Number of items per page.
  *     responses:
  *       200:
- *         description: Listings fetched successfully with pagination details
+ *         description: Listings fetched successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -249,30 +231,37 @@ router.get("/fetchlist/:id", fetchListingCount);
  *                   example: Listings fetched successfully
  *                 listings:
  *                   type: array
- *                   description: Combined or filtered list of vehicle and property listings based on query params.
  *                   items:
  *                     type: object
  *                     properties:
  *                       _id:
  *                         type: string
- *                         example: 64f1b9e7d8f5a123456789ab
+ *                         example: 64acb8f29b2f1a1234567890
  *                       title:
  *                         type: string
- *                         example: Luxury SUV for sale
+ *                         example: 2020 Toyota Corolla
  *                       price:
  *                         type: number
- *                         example: 45000
+ *                         example: 15000
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-08-01T12:34:56.000Z
+ *                       owner:
+ *                         type: object
+ *                         properties:
+ *                           firstName:
+ *                             type: string
+ *                             example: John
+ *                           lastName:
+ *                             type: string
+ *                             example: Doe
  *                       listingType:
  *                         type: string
  *                         enum: [vehicle, property]
  *                         example: vehicle
- *                       created_at:
- *                         type: string
- *                         format: date-time
- *                         example: 2025-08-03T10:30:00Z
  *                 pagination:
  *                   type: object
- *                   description: Details about the current pagination state.
  *                   properties:
  *                     page:
  *                       type: integer
@@ -280,8 +269,14 @@ router.get("/fetchlist/:id", fetchListingCount);
  *                     limit:
  *                       type: integer
  *                       example: 10
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
  *         content:
  *           application/json:
  *             schema:
@@ -291,7 +286,6 @@ router.get("/fetchlist/:id", fetchListingCount);
  *                   type: string
  *                   example: Internal Server Error
  */
-
 router.get("/fetch", fetchListing);
 
 /**

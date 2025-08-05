@@ -115,63 +115,52 @@ export const CreateListing = async (req, res) => {
 
 export const fetchListing = async (req, res) => {
   try {
-    const { type, page = 1, limit = 10 } = req.query;
+    const { type = "all", page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
+    const pagination = { page: Number(page), limit: Number(limit) };
 
-    // If type is specified, return only that type
-    if (type === "vehicle") {
-      const vehicle = await Vehicle.find()
+    const fetchData = (Model, listingType) =>
+      Model.find()
+        .populate("owner_id", "firstName lastName")
         .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean();
+        .lean()
+        .then((data) =>
+          data.map((item) => ({
+            ...item,
+            owner: item.owner_id
+              ? {
+                  firstName: item.owner_id.firstName,
+                  lastName: item.owner_id.lastName,
+                }
+              : null,
+            listingType,
+          }))
+        );
 
-      return res.status(200).json({
-        message: "Vehicle listings fetched successfully",
-        listings: vehicle,
-        pagination: { page: Number(page), limit: Number(limit) },
-      });
+    let vehicles = [];
+    let properties = [];
+
+    if (type === "vehicle" || type === "all") {
+      vehicles = await fetchData(Vehicle, "vehicle");
     }
 
-    if (type === "property") {
-      const property = await Property.find()
-        .sort({ created_at: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean();
-
-      return res.status(200).json({
-        message: "Property listings fetched successfully",
-        listings: property,
-        pagination: { page: Number(page), limit: Number(limit) },
-      });
+    if (type === "property" || type === "all") {
+      properties = await fetchData(Property, "property");
     }
 
-    // If no type is specified, fetch both and combine
-    const vehicle = await Vehicle.find()
-      .sort({ created_at: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    // Combine and sort
+    let listings = [...vehicles, ...properties].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
 
-    const property = await Property.find()
-      .sort({ created_at: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
-
-    // Combine both and sort by created_at
-    const listings = [
-      ...vehicle.map((v) => ({ ...v, listingType: "vehicle" })),
-      ...property.map((p) => ({ ...p, listingType: "property" })),
-    ];
-
-    listings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const totalItems = listings.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    listings = listings.slice(skip, skip + Number(limit));
 
     return res.status(200).json({
       message: "Listings fetched successfully",
       listings,
-      pagination: { page: Number(page), limit: Number(limit) },
+      pagination: { ...pagination, totalItems, totalPages },
     });
   } catch (err) {
     console.error("Error fetching listings:", err);

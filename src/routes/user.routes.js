@@ -9,7 +9,7 @@ import {
 } from "../controllers/user.controller.js";
 const router = Router();
 
-router.get("/userStats", getAllUsers);
+// router.get("/userStats", getAllUsers);
 router.get("/profile/:id", getCurrentUserProfile);
 
 /**
