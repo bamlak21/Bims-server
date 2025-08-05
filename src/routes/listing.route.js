@@ -296,7 +296,7 @@ router.get("/fetch", fetchListing);
 
 /**
  * @swagger
- * /api/verify-listing:
+ * /api/listing/verify-listing:
  *   patch:
  *     summary: Verify a listing (vehicle)
  *     description: Updates the status of a vehicle listing by its ID.
