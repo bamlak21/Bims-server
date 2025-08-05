@@ -296,9 +296,10 @@ router.get("/fetch", fetchListing);
 
 /**
  * @swagger
- * /api/listing/verify:
+ * /api/verify-listing:
  *   patch:
- *     summary: Verify or update the status of a listing
+ *     summary: Verify a listing (vehicle)
+ *     description: Updates the status of a vehicle listing by its ID.
  *     tags:
  *       - Listings
  *     parameters:
@@ -307,38 +308,24 @@ router.get("/fetch", fetchListing);
  *         required: true
  *         schema:
  *           type: string
- *         description: The ID of the listing to verify
- *         example: 64f1b9e7d8f5a123456789ab
+ *         description: The ID of the listing to verify.
  *       - in: query
  *         name: status
  *         required: true
  *         schema:
  *           type: string
  *           enum: [approved, rejected, pending]
- *         description: The new status for the listing
- *         example: approved
+ *         description: The new status to set for the listing.
+ *       - in: query
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [vehicle]
+ *         description: The type of listing (currently only supports 'vehicle').
  *     responses:
  *       200:
- *         description: Listing status updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 _id:
- *                   type: string
- *                   example: 64f1b9e7d8f5a123456789ab
- *                 title:
- *                   type: string
- *                   example: luxury suv for sale
- *                 status:
- *                   type: string
- *                   example: approved
- *                 updatedAt:
- *                   type: string
- *                   format: date-time
- *       404:
- *         description: Listing not found
+ *         description: Listing verified successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -346,9 +333,22 @@ router.get("/fetch", fetchListing);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: List not found
+ *                   example: Item Verified
+ *                 vehicle:
+ *                   type: object
+ *                   description: The updated vehicle listing details.
+ *       404:
+ *         description: Listing not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Vehicle not found
  *       500:
- *         description: Server error
+ *         description: Server error occurred.
  *         content:
  *           application/json:
  *             schema:
