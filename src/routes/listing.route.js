@@ -359,6 +359,6 @@ router.get("/fetch", fetchListing);
  *                   example: Server error
  */
 
-router.patch("/verify", verifyListing);
+router.patch("/verify-listing", verifyListing);
 
 export default router;
