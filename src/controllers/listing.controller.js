@@ -201,20 +201,16 @@ export const verifyListing = async (req, res) => {
   const { id, status, type } = req.query;
 
   try {
-    if (type === "vehicle") {
-      const updateVehicle = await Vehicle.findByIdAndUpdate(
-        id,
-        { status },
-        { new: true }
-      );
-
-      if (!updateVehicle) {
-        return res.status(404).json({ message: "Vehicle not found" });
-      }
-      return res
-        .status(200)
-        .json({ message: "Item Verified", vehicle: updatedList.lean() });
+    if (!["vehicle", "property"].includes(type)) {
+      return res.status(400).json({ message: "Type field not found" });
     }
+
+    const model = type === "vehicle" ? Vehicle : Property;
+    const verified = await model
+      .findByIdAndUpdate(id, { status }, { new: true })
+      .lean();
+
+    return res.status(200).json({ message: "Listing verified", verified });
   } catch (error) {
     console.error("Error verifying list:", error);
     return res.status(500).json({ message: "Server error" });

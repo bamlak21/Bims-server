@@ -321,8 +321,8 @@ router.get("/fetch", fetchListing);
  *         required: true
  *         schema:
  *           type: string
- *           enum: [vehicle]
- *         description: The type of listing (currently only supports 'vehicle').
+ *           enum: [vehicle, property]
+ *         description: The type of listing
  *     responses:
  *       200:
  *         description: Listing verified successfully.
