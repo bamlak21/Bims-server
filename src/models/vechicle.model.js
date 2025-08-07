@@ -4,6 +4,7 @@ const VehicleSchema = new Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
+    type: { type: String, required: true, default: "vehicle" },
     category: { type: String, required: true },
     price: { type: Number, required: true },
     vehicleSpecs: {

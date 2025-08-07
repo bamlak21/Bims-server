@@ -83,6 +83,7 @@ export const CreateListing = async (req, res) => {
       type === "vehicle"
         ? await Vehicle.create({
             title,
+            type,
             description,
             category,
             price,
@@ -93,6 +94,7 @@ export const CreateListing = async (req, res) => {
           })
         : await Property.create({
             title,
+            type,
             description,
             category,
             price,
