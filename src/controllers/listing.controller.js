@@ -205,3 +205,21 @@ export const verifyListing = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const fetchListingById = async (req, res) => {
+  const { id, type } = req.query;
+  if (!id || !type) {
+    return res.status(400).json({ message: "Id or type missing" });
+  }
+
+  try {
+    const model = type === "vehicle" ? Vehicle : Property;
+    const listing = await model.findById(id);
+    console.log(listing);
+
+    return res.status(200).json({ message: "Success", listing });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

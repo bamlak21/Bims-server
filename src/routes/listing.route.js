@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   CreateListing,
   fetchListing,
+  fetchListingById,
   fetchListingCount,
   verifyListing,
 } from "../controllers/listing.controller.js";
@@ -149,7 +150,7 @@ router.post("/create", upload.array("images", 5), CreateListing);
 
 /**
  * @swagger
- * /api/listing/fetchlist/{id}:
+ * /api/listing/fetchlistcount/{id}:
  *   get:
  *     summary: Get total count of listings (vehicles + properties) for an owner
  *     description: Returns the total number of vehicle and property listings associated with a specific owner.
@@ -186,7 +187,7 @@ router.post("/create", upload.array("images", 5), CreateListing);
  *       500:
  *         description: Internal Server Error.
  */
-router.get("/fetchlist/:id", fetchListingCount);
+router.get("/fetchlistcount/:id", fetchListingCount);
 
 /**
  * @swagger
@@ -288,6 +289,66 @@ router.get("/fetchlist/:id", fetchListingCount);
  */
 router.get("/fetch", fetchListing);
 
+/**
+ * @swagger
+ * /api/listing/fetchListing:
+ *   get:
+ *     summary: Fetch a listing (vehicle or property) by ID.
+ *     tags:
+ *       - Listings
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: MongoDB ObjectId of the listing.
+ *         example: "64acb8f29b2f1a1234567890"
+ *       - in: query
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [vehicle, property]
+ *         description: Type of the listing (vehicle or property).
+ *         example: "vehicle"
+ *     responses:
+ *       200:
+ *         description: Listing fetched successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 listing:
+ *                   type: object
+ *                   description: The listing data.
+ *       400:
+ *         description: Missing id or type in the query.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Id or type missing"
+ *       500:
+ *         description: Server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ */
+
+router.get("/fetchListing", fetchListingById);
 /**
  * @swagger
  * /api/listing/verify-listing:
