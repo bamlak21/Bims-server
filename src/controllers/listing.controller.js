@@ -223,3 +223,36 @@ export const fetchListingById = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const SetListingToBroker = async (req, res) => {
+  const { id: listingId, broker_id, type } = req.query;
+
+  if (!listingId || !broker_id || !type) {
+    return res
+      .status(400)
+      .json({ message: "Listing Id, broker_id, and type are required" });
+  }
+
+  if (type !== "vehicle" && type !== "property") {
+    return res
+      .status(400)
+      .json({ message: "Type must be 'vehicle' or 'property'" });
+  }
+  try {
+    const model = type === "vehicle" ? Vehicle : Property;
+    const listing = await model.findById(listingId);
+    if (!listing) return res.status(400).json({ message: "Listing not found" });
+
+    listing.broker_id = broker_id;
+    listing.is_broker_assigned = true;
+
+    await listing.save();
+
+    return res
+      .status(200)
+      .json({ message: "Listing assigned to broker successfully", listing });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

@@ -4,6 +4,7 @@ import {
   fetchListing,
   fetchListingById,
   fetchListingCount,
+  SetListingToBroker,
   verifyListing,
 } from "../controllers/listing.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
@@ -29,7 +30,6 @@ const router = Router();
  *               - description
  *               - category
  *               - price
- *               - condition
  *               - owner_id
  *               - status
  *               - images
@@ -44,34 +44,38 @@ const router = Router();
  *                 example: luxury suv for sale
  *               description:
  *                 type: string
- *                 example: a well-maintained suv with low mileage.
+ *                 example: A well-maintained SUV with low mileage.
  *               category:
  *                 type: string
  *                 example: suv
  *               price:
  *                 type: number
  *                 example: 45000
- *               make:
- *                 type: string
- *                 example: toyota
- *               model:
- *                 type: string
- *                 example: land cruiser
- *               year:
- *                 type: integer
- *                 example: 2020
- *               mileage:
- *                 type: integer
- *                 example: 25000
- *               transmission:
- *                 type: string
- *                 example: automatic
- *               fuelType:
- *                 type: string
- *                 example: diesel
- *               condition:
- *                 type: string
- *                 example: excellent
+ *               vehicleSpecs:
+ *                 type: object
+ *                 description: Required only for vehicle listings
+ *                 properties:
+ *                   make:
+ *                     type: string
+ *                     example: Toyota
+ *                   model:
+ *                     type: string
+ *                     example: Land Cruiser
+ *                   year:
+ *                     type: integer
+ *                     example: 2020
+ *                   mileage:
+ *                     type: integer
+ *                     example: 25000
+ *                   transmission:
+ *                     type: string
+ *                     example: automatic
+ *                   fuelType:
+ *                     type: string
+ *                     example: diesel
+ *                   condition:
+ *                     type: string
+ *                     example: excellent
  *               owner_id:
  *                 type: string
  *                 description: MongoDB ObjectId of the owner
@@ -88,16 +92,16 @@ const router = Router();
  *                 properties:
  *                   city:
  *                     type: string
- *                     example: addis ababa
+ *                     example: Addis Ababa
  *                   subcity:
  *                     type: string
- *                     example: bole
+ *                     example: Bole
  *                   woreda:
  *                     type: string
  *                     example: 04
  *                   address:
  *                     type: string
- *                     example: behind xyz mall
+ *                     example: Behind XYZ Mall
  *               specifications:
  *                 type: object
  *                 description: Required only for property listings
@@ -116,13 +120,14 @@ const router = Router();
  *                     example: 2018
  *                   condition:
  *                     type: string
+ *                     enum: [excellent, good, fair, needs_renovation]
  *                     example: good
  *                   swimmingPool:
  *                     type: boolean
  *                     example: true
  *               images:
  *                 type: array
- *                 description: multiple image files
+ *                 description: Multiple image files
  *                 items:
  *                   type: string
  *                   format: binary
@@ -136,14 +141,32 @@ const router = Router();
  *               properties:
  *                 message:
  *                   type: string
- *                   example: listing created successfully
+ *                   example: Listing created successfully
  *                 listing:
  *                   type: object
  *                   description: The created listing object
  *       400:
- *         description: bad request - missing fields or images
+ *         description: Bad request - missing required fields or images
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Missing required property fields
  *       500:
- *         description: server error
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ *                 error:
+ *                   type: string
  */
 
 router.post("/create", upload.array("images", 5), CreateListing);
@@ -415,5 +438,70 @@ router.get("/fetchListing", fetchListingById);
  */
 
 router.patch("/verify-listing", verifyListing);
+
+/**
+ * @swagger
+ * /api/listing/assign-to-broker:
+ *   patch:
+ *     summary: Assign a listing (vehicle or property) to a broker
+ *     description: >
+ *       This endpoint assigns a specified listing (either a vehicle or property) to a broker by updating the listing's broker ID and marking it as broker-assigned.
+ *       It requires the listing ID, broker ID, and listing type as query parameters.
+ *       Used by brokers to claim or be assigned listings for negotiation or sale.
+ *     tags:
+ *       - Listings
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The ID of the listing to assign
+ *       - in: query
+ *         name: broker_id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The ID of the broker to assign the listing to
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [vehicle, property]
+ *         required: true
+ *         description: The type of listing ("vehicle" or "property")
+ *     responses:
+ *       200:
+ *         description: Listing assigned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 listing:
+ *                   type: object
+ *                   description: The updated listing object
+ *       400:
+ *         description: Bad request - missing or invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ */
+router.patch("/assign-to-broker", SetListingToBroker);
 
 export default router;

@@ -25,6 +25,15 @@ const VehicleSchema = new Schema(
       ref: "User",
       required: true,
     },
+    broker_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    is_broker_assigned: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["pending", "draft", "approved", "rejected", "closed"],

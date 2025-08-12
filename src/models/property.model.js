@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const PropertySchema = new mongoose.Schema(
   {
@@ -29,6 +29,15 @@ const PropertySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    broker_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    is_broker_assigned: {
+      type: Boolean,
+      default: false,
     },
     status: {
       type: String,
