@@ -225,7 +225,7 @@ export const fetchListingById = async (req, res) => {
 };
 
 export const SetListingToBroker = async (req, res) => {
-  const { id: listingId, broker_id, type } = req.query;
+  const { listingId, broker_id, type } = req.query;
 
   if (!listingId || !broker_id || !type) {
     return res

@@ -452,7 +452,7 @@ router.patch("/verify-listing", verifyListing);
  *       - Listings
  *     parameters:
  *       - in: query
- *         name: id
+ *         name: listingId
  *         schema:
  *           type: string
  *         required: true
