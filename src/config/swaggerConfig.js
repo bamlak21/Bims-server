@@ -12,6 +12,15 @@ export const swaggerOptions = {
         url: "http://localhost:3000", // Update if using a different port or deployment URL
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
   },
   apis: ["./src/routes/*.js"], // Path to your API route files
 };
