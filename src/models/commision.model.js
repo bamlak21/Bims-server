@@ -12,6 +12,10 @@ const CommissionSchema = new Schema({
     ref: "User",
     required: true,
   },
+  buyer_id: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+  },
   listing_id: {
     type: Schema.Types.ObjectId,
     refPath: "listing_type",
