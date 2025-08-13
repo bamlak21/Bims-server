@@ -27,7 +27,7 @@ export const CreateNotification = async ({
       link: link,
     });
 
-    return notification;
+    return notification.lean();
   } catch (err) {
     console.log("Failed to create notification", err);
   }
