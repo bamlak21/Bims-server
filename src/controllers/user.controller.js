@@ -81,7 +81,7 @@ export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select(
-      "firstName lastName email phoneNumber userType verified createdAt"
+      "firstName lastName email phoneNumber userType photo verified createdAt"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
