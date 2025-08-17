@@ -59,24 +59,24 @@ export const CreateListing = async (req, res) => {
   }
 
   const imagePaths = req.files.map((file) => file.path.replace(/\\/g, "/"));
-  // const formattedLocation = location
-  //   ? {
-  //       city: location.city,
-  //       subcity: location.subcity,
-  //       woreda: location.woreda,
-  //       address: location.address,
-  //     }
-  //   : null;
-  // const formattedSpecifications = specifications
-  //   ? {
-  //       bedrooms: specifications.bedrooms,
-  //       bathrooms: specifications.bathrooms,
-  //       area: specifications.area,
-  //       yearBuilt: specifications.yearBuilt,
-  //       condition: specifications.condition,
-  //       swimmingPool: specifications.swimmingPool,
-  //     }
-  //   : null;
+  const formattedLocation = location
+    ? {
+        city: location.city,
+        subcity: location.subcity,
+        woreda: location.woreda,
+        address: location.address,
+      }
+    : null;
+  const formattedSpecifications = specifications
+    ? {
+        bedrooms: specifications.bedrooms,
+        bathrooms: specifications.bathrooms,
+        area: specifications.area,
+        yearBuilt: specifications.yearBuilt,
+        condition: specifications.condition,
+        swimmingPool: specifications.swimmingPool,
+      }
+    : null;
 
   try {
     const listing =
@@ -88,7 +88,7 @@ export const CreateListing = async (req, res) => {
             price,
             vehicleSpecs: parsedVehicleSpecs,
             owner_id,
-            status,
+            status: status || "pending",
             image_paths: imagePaths,
           })
         : await Property.create({
@@ -97,10 +97,10 @@ export const CreateListing = async (req, res) => {
             category,
             price,
             location: formattedLocation,
-            specifications: parsedSpecifications,
+            specifications: formattedSpecifications,
             image_paths: imagePaths,
             owner_id,
-            status,
+            status: status || "pending",
           });
 
     return res

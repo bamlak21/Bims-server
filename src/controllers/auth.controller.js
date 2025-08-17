@@ -45,11 +45,12 @@ export const Register = async (req, res) => {
       userType,
       phoneNumber,
       password: hashedPass,
-      verified: false,
       last_login: null,
     });
 
     if (userType === "broker") {
+      newUser.verified = false;
+      await newUser.save();
       if (!req.file) {
         return res
           .status(400)
@@ -95,7 +96,6 @@ export const Login = async (req, res) => {
         email ? { email } : null,
       ].filter(Boolean),
     });
-
     if (!user) {
       return res.status(404).json({ message: "User not Found" });
     }
@@ -111,10 +111,15 @@ export const Login = async (req, res) => {
     }
 
     const token = createToken(user);
-
     return res.status(200).json({
       message: "user logged in",
-      phoneNumber: user.phoneNumber,
+      data: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        image: user.photo,
+        role: user.userType,
+      },
       token: token,
     });
   } catch (error) {
@@ -259,136 +264,3 @@ export const verifyUser = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-
-// export const getCurrentUserProfile = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const user = await User.findById(id).select(
-//       "firstName lastName email phoneNumber userType verified createdAt"
-//     );
-
-//     if (!user) return res.status(404).json({ message: "User not found" });
-
-//     res.status(200).json(user);
-//   } catch (err) {
-//     console.error("Error in /me route:", err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// export const getCurrentUserProfile = async (req, res) => {
-//   try {
-//     const authHeader = req.headers.authorization;
-
-//     // Check for presence of Authorization header
-//     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-//       return res.status(401).json({ message: 'Authorization token missing or malformed' });
-//     }
-
-//     const token = authHeader.split(' ')[1];
-
-//     // Verify token using utility
-//     const decoded = verifyToken(token);
-
-//     if (!decoded || !decoded.id) {
-//       return res.status(401).json({ message: 'Invalid or expired token' });
-//     }
-
-//     // Find user by ID from decoded token
-//     const user = await User.findById(decoded.id).select('-password'); // Exclude password
-
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-
-//     return res.status(200).json(user);
-//   } catch (error) {
-//     console.error('Error fetching current user:', error);
-//     return res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
-
-// export const getVerifiedBrokers = async (req, res) => {
-//        try {
-//          const brokers = await User.find({ userType: 'broker', verified: true }).select('_id firstName lastName email');
-//          res.json(brokers);
-//        } catch (err) {
-//          console.error('Error fetching brokers:', err);
-//          res.status(500).json({ message: 'Internal Server Error' });
-//        }
-//      }
-
-// export const submitListing = async (req, res) => {
-//        try {
-//          const {
-//            title, description, type, category, price, currency, location,
-//            features, specifications, vehicle_specs, broker_id, owner_id,
-//            owner_name, owner_email
-//          } = req.body;
-
-//          const listing = new Listings({
-//            title,
-//            description,
-//            type,
-//            category,
-//            price,
-//            currency,
-//            location,
-//            features,
-//            specifications: type === 'property' ? specifications : {},
-//            vehicle_specs: type === 'vehicle' ? vehicle_specs : {},
-//            broker_id,
-//            owner_id,
-//            owner_name,
-//            owner_email,
-//            status: 'pending',
-//            needs_broker: true,
-//            views: 0,
-//            inquiries: 0
-//          });
-
-//          await listing.save();
-//          res.status(201).json({ message: 'Listing submitted successfully' });
-//        } catch (err) {
-//          console.error('Error submitting listing:', err);
-//          res.status(400).json({ message: 'Failed to submit listing', error: err.message });
-//        }
-//      };
-
-//   export const updateUserProfile = async (req, res) => {
-//        try {
-//          const { id } = req.params;
-//          const updates = req.body;
-//          const user = await User.findByIdAndUpdate(id, updates, { new: true });
-//          if (!user) {
-//            return res.status(404).json({ message: 'User not found' });
-//          }
-//          res.json(user);
-//        } catch (err) {
-//          console.error('Error updating user profile:', err);
-//          res.status(500).json({ message: 'Internal Server Error', error: err.message });
-//        }
-//      };
-// export const GetListings = async (req, res) => {
-//   const { userId, role } = req.query;
-
-//   try {
-//     let listings = [];
-
-//     if (role === "broker") {
-//       listings = await listings.find({ brokerId: userId });
-//     } else if (role === "owner") {
-//       // Replace this if owners are associated differently
-//       listings = await listings.find({ ownerId: userId });
-//     } else if (role === "admin") {
-//       listings = await Listing.find({});
-//     } else {
-//       return res.status(403).json({ message: "Unauthorized Role" });
-//     }
-
-//     return res.status(200).json(listings);
-//   } catch (error) {
-//     console.error("Failed to get listings:", error);
-//     return res.status(500).json({ message: "Error fetching listings" });
-//   }
-// };
