@@ -111,7 +111,7 @@ export const UpdateUserProfile = async (req, res) => {
     if (socialLinks && typeof socialLinks === "object")
       user.socialLinks = socialLinks;
     if (req.file) {
-      user.profileImage = req.file.path.replace(/\\/g, "/");
+      user.photo = req.file.path.replace(/\\/g, "/");
     }
 
     await user.save();

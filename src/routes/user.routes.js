@@ -7,6 +7,7 @@ import {
   deactivateUser,
   fetchAllUsers,
 } from "../controllers/user.controller.js";
+import { upload } from "../middleware/multer.middleware.js";
 const router = Router();
 
 // router.get("/userStats", getAllUsers);
@@ -98,7 +99,7 @@ router.get("/profile/:id", getCurrentUserProfile);
  *                   example: Server Error
  */
 
-router.patch("/update", UpdateUserProfile);
+router.patch("/update", upload.single("profileImage"), UpdateUserProfile);
 
 /**
  * @swagger
