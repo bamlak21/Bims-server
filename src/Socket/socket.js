@@ -1,5 +1,5 @@
-import ChatRoom from "./models/ChatRoom.js";
-import Message from "./models/Message.js";
+import ChatRoom from "../models/chat.model.js";
+import Message from "../models/message.model.js";
 
 export default function registerSockets(io) {
   io.on("connection", (socket) => {
