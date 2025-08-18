@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import adminRouter from "./routes/admin.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
 import listingRouter from "./routes/listing.route.js";
@@ -37,6 +38,7 @@ app.use(
 RegisterSocket(io);
 
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/user", userRouter);
 app.use("/api/listing", listingRouter);
 app.use("/api/notifications", notificationsRouter);

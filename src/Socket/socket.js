@@ -1,7 +1,7 @@
 import ChatRoom from "../models/chat.model.js";
 import Message from "../models/message.model.js";
 
-export default function registerSockets(io) {
+export function RegisterSocket(io) {
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
