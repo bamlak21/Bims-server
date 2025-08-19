@@ -236,12 +236,14 @@ export const verifyListing = async (req, res) => {
 
 export const fetchListingById = async (req, res) => {
   const { id, type } = req.query;
+  const normalizedType =
+    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
   if (!id || !type) {
     return res.status(400).json({ message: "Id or type missing" });
   }
 
   try {
-    const model = type === "vehicle" ? Vehicle : Property;
+    const model = normalizedType === "Vehicle" ? Vehicle : Property;
     const listing = await model.findById(id);
     console.log(listing);
 
