@@ -15,7 +15,8 @@ export const CreateListing = async (req, res) => {
     specifications,
     rejection_reason,
   } = req.body;
-  const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
+  const parsedLocation =
+    typeof location === "string" ? JSON.parse(location) : location;
   const parsedSpecifications =
     typeof specifications === "string"
       ? JSON.parse(specifications)
@@ -191,11 +192,14 @@ export const verifyListing = async (req, res) => {
   const reason = req.body ? req.body.reason : null;
 
   if (!id || !status || !type) {
-    return res.status(400).json({ message: "Required query parameters missing" });
+    return res
+      .status(400)
+      .json({ message: "Required query parameters missing" });
   }
 
   // Capitalize first letter of type for case-insensitive comparison
-  const normalizedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  const normalizedType =
+    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
   if (!["Vehicle", "Property"].includes(normalizedType)) {
     return res.status(400).json({ message: "Invalid listing type" });
   }
@@ -285,19 +289,24 @@ export const MyListings = async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "Required Field missing" });
+    return res.status(400).json({ message: "Required field missing" });
   }
 
   try {
-    const listings = await find({ owner_id: id }).lean();
+    const vehicles = await Vehicle.find({ owner_id: id }).lean();
+    const properties = await Property.find({ owner_id: id }).lean();
 
-    if (!listings || listings.length === 0) {
-      return res.status(404).json({ message: "No Listing found" });
+    if (vehicles.length === 0 && properties.length === 0) {
+      return res.status(404).json({ message: "No listings found" });
     }
 
-    return res.status(200).json({ message: "Listings", listings });
+    const listings = [...vehicles, ...properties];
+
+    return res
+      .status(200)
+      .json({ message: "Listings retrieved successfully", listings });
   } catch (err) {
     console.error("Error fetching listings:", err);
-    res.status(500).json({ message: "Server Error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
