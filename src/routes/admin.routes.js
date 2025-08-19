@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { RejectListing } from "../controllers/admin.controller.js";
+import { GetCommissions } from "../controllers/commission.controller.js";
 
 const router = Router();
 
