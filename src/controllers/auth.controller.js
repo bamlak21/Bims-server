@@ -264,3 +264,28 @@ export const verifyUser = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const ForgotPassword = async (req, res) => {
+  const { phoneNumber, newPassword } = req.body;
+
+  if (!phoneNumber || !newPassword) {
+    return res.status(500).json({ message: "Required Fields missing" });
+  }
+
+  try {
+    const user = await User.findOne({ phoneNumber });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+
+    user.password = newHash;
+    await user.save();
+
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error while processing forgot password: ", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};

@@ -8,6 +8,7 @@ import {
   //   fetchDetailListing,
   getAllUsers,
   verifyUser,
+  ForgotPassword,
   //   getCurrentUserProfile,
   //   getVerifiedBrokers,
   //   submitListing,
@@ -204,6 +205,71 @@ router.get("/user", getAllUsers);
  *                   example: Server error
  */
 router.patch("/:id/verify", verifyUser);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Reset a user's password using their phone number
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phoneNumber:
+ *                 type: string
+ *                 example: "+251912345678"
+ *               newPassword:
+ *                 type: string
+ *                 example: "NewSecurePassword123!"
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password updated successfully
+ *       400:
+ *         description: Required fields missing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Required fields missing
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
+
+router.post("/forgot-password", ForgotPassword);
 // router.get('/profile/:id',getCurrentUserProfile)
 // router.get('/brokers/verified', getVerifiedBrokers);
 // router.post('/listings/submit', submitListing);
