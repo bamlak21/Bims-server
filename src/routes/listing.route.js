@@ -4,6 +4,7 @@ import {
   fetchListing,
   fetchListingById,
   fetchListingCount,
+  MyListings,
   SetListingToBroker,
   verifyListing,
 } from "../controllers/listing.controller.js";
@@ -503,5 +504,85 @@ router.patch("/verify-listing", verifyListing);
  *                   type: string
  */
 router.patch("/assign-to-broker", SetListingToBroker);
+
+/**
+ * @swagger
+ * /api/listing/my-listing/{id}:
+ *   get:
+ *     summary: Get all listings for a specific owner
+ *     tags:
+ *       - Listings
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the owner
+ *     responses:
+ *       200:
+ *         description: Listings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Listings retrieved successfully
+ *                 listings:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       owner_id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *       400:
+ *         description: Required field missing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Required field missing
+ *       404:
+ *         description: No listings found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No listings found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
+
+router.get("/my-listings/:id", MyListings);
 
 export default router;

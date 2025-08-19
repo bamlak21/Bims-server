@@ -256,3 +256,24 @@ export const SetListingToBroker = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const MyListings = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "Required Field missing" });
+  }
+
+  try {
+    const listings = await find({ owner_id: id }).lean();
+
+    if (!listings || listings.length === 0) {
+      return res.status(404).json({ message: "No Listing found" });
+    }
+
+    return res.status(200).json({ message: "Listings", listings });
+  } catch (err) {
+    console.error("Error fetching listings:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
