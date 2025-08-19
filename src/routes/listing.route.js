@@ -507,7 +507,7 @@ router.patch("/assign-to-broker", SetListingToBroker);
 
 /**
  * @swagger
- * /api/listing/my-listing/{id}:
+ * /api/listing/my-listings/{id}:
  *   get:
  *     summary: Get all listings for a specific owner
  *     tags:
