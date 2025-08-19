@@ -15,7 +15,7 @@ export const CreateListing = async (req, res) => {
     specifications,
     rejection_reason,
   } = req.body;
-
+  const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
   const parsedSpecifications =
     typeof specifications === "string"
       ? JSON.parse(specifications)
@@ -59,24 +59,24 @@ export const CreateListing = async (req, res) => {
   }
 
   const imagePaths = req.files.map((file) => file.path.replace(/\\/g, "/"));
-  const formattedLocation = location
-    ? {
-        city: location.city,
-        subcity: location.subcity,
-        woreda: location.woreda,
-        address: location.address,
-      }
-    : null;
-  const formattedSpecifications = specifications
-    ? {
-        bedrooms: specifications.bedrooms,
-        bathrooms: specifications.bathrooms,
-        area: specifications.area,
-        yearBuilt: specifications.yearBuilt,
-        condition: specifications.condition,
-        swimmingPool: specifications.swimmingPool,
-      }
-    : null;
+  // const formattedLocation = location
+  //   ? {
+  //       city: location.city,
+  //       subcity: location.subcity,
+  //       woreda: location.woreda,
+  //       address: location.address,
+  //     }
+  //   : null;
+  // const formattedSpecifications = specifications
+  //   ? {
+  //       bedrooms: specifications.bedrooms,
+  //       bathrooms: specifications.bathrooms,
+  //       area: specifications.area,
+  //       yearBuilt: specifications.yearBuilt,
+  //       condition: specifications.condition,
+  //       swimmingPool: specifications.swimmingPool,
+  //     }
+  //   : null;
 
   try {
     const listing =
@@ -96,8 +96,8 @@ export const CreateListing = async (req, res) => {
             description,
             category,
             price,
-            location: formattedLocation,
-            specifications: formattedSpecifications,
+            location: parsedLocation,
+            specifications: parsedSpecifications,
             image_paths: imagePaths,
             owner_id,
             status: status || "pending",
@@ -119,7 +119,7 @@ export const fetchListing = async (req, res) => {
     const skip = (page - 1) * limit;
     const pagination = { page: Number(page), limit: Number(limit) };
 
-    const fetchData = (Model, listingType) =>
+    const fetchData = (Model, type) =>
       Model.find()
         .populate("owner_id", "firstName lastName")
         .sort({ created_at: -1 })
@@ -133,7 +133,7 @@ export const fetchListing = async (req, res) => {
                   lastName: item.owner_id.lastName,
                 }
               : null,
-            listingType,
+            type,
           }))
         );
 
@@ -188,21 +188,45 @@ export const fetchListingCount = async (req, res) => {
 
 export const verifyListing = async (req, res) => {
   const { id, status, type } = req.query;
+  const reason = req.body ? req.body.reason : null;
+
+  if (!id || !status || !type) {
+    return res.status(400).json({ message: "Required query parameters missing" });
+  }
+
+  // Capitalize first letter of type for case-insensitive comparison
+  const normalizedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  if (!["Vehicle", "Property"].includes(normalizedType)) {
+    return res.status(400).json({ message: "Invalid listing type" });
+  }
+
+  if (!["approved", "rejected"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status" });
+  }
+
+  if (status === "rejected" && !reason) {
+    return res.status(400).json({ message: "Rejection reason is required" });
+  }
 
   try {
-    if (!["vehicle", "property"].includes(type)) {
-      return res.status(400).json({ message: "Type field not found" });
+    const model = normalizedType === "Vehicle" ? Vehicle : Property;
+
+    const listing = await model.findById(id);
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
     }
 
-    const model = type === "vehicle" ? Vehicle : Property;
-    const verified = await model
-      .findByIdAndUpdate(id, { status }, { new: true })
-      .lean();
+    listing.status = status;
+    listing.rejection_reason = status === "rejected" ? reason : null;
+    await listing.save();
 
-    return res.status(200).json({ message: "Listing verified", verified });
-  } catch (error) {
-    console.error("Error verifying list:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(200).json({
+      message: `Listing ${status} successfully`,
+      verified: status === "approved",
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
   }
 };
 

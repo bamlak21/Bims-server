@@ -27,6 +27,7 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(
   cors({
@@ -43,6 +44,7 @@ app.use("/api/user", userRouter);
 app.use("/api/listing", listingRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/uploads", express.static("uploads"));
+
 async function StartServer() {
   try {
     await mongoose
