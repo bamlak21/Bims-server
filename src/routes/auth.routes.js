@@ -8,7 +8,9 @@ import {
   //   fetchDetailListing,
   getAllUsers,
   verifyUser,
-  ForgotPassword,
+  verifyOtp,
+  forgotPassword,
+  
   //   getCurrentUserProfile,
   //   getVerifiedBrokers,
   //   submitListing,
@@ -269,11 +271,12 @@ router.patch("/:id/verify", verifyUser);
  *                   example: Server error
  */
 
-router.post("/forgot-password", ForgotPassword);
+router.post("/forgot-password", forgotPassword);
 // router.get('/profile/:id',getCurrentUserProfile)
 // router.get('/brokers/verified', getVerifiedBrokers);
 // router.post('/listings/submit', submitListing);
 // router.put('/user/:id',updateUserProfile);
 // router.get("/listings", GetListings)
 // router.get('/user-profile', GetUserProfile);
+router.post("verify-otp",verifyOtp)
 export default router;

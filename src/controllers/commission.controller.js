@@ -15,7 +15,7 @@ export const GetCommissions = async (req, res) => {
     return res.status(200).json({ message: "Success", commission });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Server Error" });
+    return res.status(500).json({ message: "Server Error" }); 
   }
 };
 
@@ -38,6 +38,27 @@ export const GetBrokerCommissions = async (req, res) => {
     return res.status(200).json({ message: "Success", commissions });
   } catch (error) {
     console.error("Error while fetching broker commissions", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const GetCommissionByListingId = async (req, res) => {
+  const { listing_id } = req.query;
+  if (!listing_id) {
+    return res.status(400).json({ message: "Listing ID is required" });
+  }
+  try {
+    const commission = await Commission.findOne({ listing_id })
+      .populate("broker_id", "firstName lastName email")
+      .populate("owner_id", "firstName lastName email")
+      .populate("client_id", "firstName lastName email")
+      .lean();
+    if (!commission) {
+      return res.status(404).json({ message: "Commission not found" });
+    }
+    return res.status(200).json(commission);
+  } catch (error) {
+    console.error("Error fetching commission:", error);
     return res.status(500).json({ message: "Server Error" });
   }
 };

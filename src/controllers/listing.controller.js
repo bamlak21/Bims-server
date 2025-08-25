@@ -1,5 +1,6 @@
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vechicle.model.js";
+import {Deal} from '../models/deals.model.js';
 
 export const CreateListing = async (req, res) => {
   const {
@@ -31,7 +32,7 @@ export const CreateListing = async (req, res) => {
   }
 
   if (
-    type === "vehicle" &&
+    type === "Vehicle" &&
     (!title ||
       !description ||
       !category ||
@@ -44,7 +45,7 @@ export const CreateListing = async (req, res) => {
   }
 
   if (
-    type === "property" &&
+    type === "Property" &&
     (!title ||
       !description ||
       !category ||
@@ -81,7 +82,7 @@ export const CreateListing = async (req, res) => {
 
   try {
     const listing =
-      type === "vehicle"
+      type === "Vehicle"
         ? await Vehicle.create({
             title,
             description,
@@ -116,13 +117,56 @@ export const CreateListing = async (req, res) => {
 
 export const fetchListing = async (req, res) => {
   try {
-    const { type = "all", page = 1, limit = 10 } = req.query;
+    const {
+      type = "all",
+      page = 1,
+      limit = 10,
+      minPrice,
+      maxPrice,
+      category,
+      search, // renamed from searchTerm
+    } = req.query;
+
     const skip = (page - 1) * limit;
     const pagination = { page: Number(page), limit: Number(limit) };
 
+    // Helper to build filters
+    const buildFilter = (type) => {
+      const filter = {};
+
+      // Apply price filter
+      if (minPrice || maxPrice) {
+        filter.price = {};
+        if (minPrice) filter.price.$gte = Number(minPrice);
+        if (maxPrice) filter.price.$lte = Number(maxPrice);
+      }
+
+      // Category
+      if (category && category !== "all") {
+        filter.category = category;
+      }
+
+      // Search by title or location
+      if (search) {
+        const regex = new RegExp(search, "i"); // case-insensitive
+        if (type === "property") {
+          filter.$or = [
+            { title: regex },
+            { "location.city": regex },
+            { "location.subcity": regex },
+          ];
+        } else if (type === "vehicle") {
+          filter.$or = [{ title: regex }];
+        }
+      }
+
+      return filter;
+    };
+
     const fetchData = (Model, type) =>
-      Model.find()
+      Model.find(buildFilter(type))
         .populate("owner_id", "firstName lastName")
+        .populate("broker_id", "firstName lastName") 
         .sort({ created_at: -1 })
         .lean()
         .then((data) =>
@@ -168,6 +212,7 @@ export const fetchListing = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
@@ -244,7 +289,10 @@ export const fetchListingById = async (req, res) => {
 
   try {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
-    const listing = await model.findById(id);
+    const listing = await model.findById(id)
+    .populate("broker_id", "firstName lastName email")
+    .populate("owner_id", "firstName lastName email")
+    .lean();
     console.log(listing);
 
     return res.status(200).json({ message: "Success", listing });
@@ -256,36 +304,65 @@ export const fetchListingById = async (req, res) => {
 
 export const SetListingToBroker = async (req, res) => {
   const { listingId, broker_id, type } = req.query;
+  const { is_broker_assigned } = req.body;
 
   if (!listingId || !broker_id || !type) {
-    return res
-      .status(400)
-      .json({ message: "Listing Id, broker_id, and type are required" });
+    return res.status(400).json({ message: 'Missing required parameters' });
   }
-
-  if (type !== "vehicle" && type !== "property") {
-    return res
-      .status(400)
-      .json({ message: "Type must be 'vehicle' or 'property'" });
-  }
+   const normalizedType =
+    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
   try {
-    const model = type === "vehicle" ? Vehicle : Property;
+    const model = normalizedType === 'Vehicle' ? Vehicle : Property;
     const listing = await model.findById(listingId);
-    if (!listing) return res.status(400).json({ message: "Listing not found" });
 
-    listing.broker_id = broker_id;
-    listing.is_broker_assigned = true;
+    if (!listing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
 
+    if (listing.broker_id && listing.broker_id.toString() !== broker_id) {
+      return res.status(400).json({ message: 'Listing already assigned to another broker' });
+    }
+
+    listing.broker_id = broker_id?broker_id:null;
+    listing.is_broker_assigned = is_broker_assigned?true:false;
     await listing.save();
 
-    return res
-      .status(200)
-      .json({ message: "Listing assigned to broker successfully", listing });
-  } catch (err) {
-    console.log(err);
-    return res.status(500).json({ message: "Server error" });
+  //   // ✅ Check if deal already exists
+    const existingDeal = await Deal.findOne({
+      listing_id: listingId,
+      broker_id,
+      type,
+    });
+
+    if (!existingDeal) {
+      await Deal.create({
+         listing_id: listingId,
+  broker_id,
+  owner_id: listing.owner_id,
+  title:listing.title,
+  listing_type: type,
+  status: 'negotiating', 
+  listing_snapshot: {
+          title: listing.title,
+          description: listing.description,
+          price: listing.price,
+          location: listing.location,
+          images: listing.image_paths || listing.images || [],
+        },
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Broker assigned and deal created successfully',
+      listing,
+    });
+  } catch (error) {
+    console.error('Error in SetListingToBroker:', error);
+    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 };
+
+
 
 export const MyListings = async (req, res) => {
   const { id } = req.params;
@@ -310,5 +387,75 @@ export const MyListings = async (req, res) => {
   } catch (err) {
     console.error("Error fetching listings:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getAssignedListings = async (req, res) => {
+  const { brokerId, type } = req.query;
+
+  if (!brokerId || !type) {
+    return res.status(400).json({ message: 'Missing brokerId or type' });
+  }
+    const normalizedType =
+    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+
+  try {
+    const model = normalizedType === 'Vehicle' ? Vehicle : Property;
+
+    const listings = await model.find({
+      broker_id: brokerId,
+      is_broker_assigned: true,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(listings);
+  } catch (error) {
+    console.error('Error fetching assigned listings:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+export const AssignClientToDeal = async (req, res) => {
+  const { listingId, broker_id, client_id } = req.body;
+
+  if (!listingId || !broker_id || !client_id) {
+    return res.status(400).json({ message: "Missing required parameters" });
+  }
+
+  try {
+    // Find the deal
+    let deal = await Deal.findOne({ listing_id: listingId, broker_id });
+
+    if (!deal) {
+      return res
+        .status(404)
+        .json({ message: "No deal found for this listing and broker" });
+    }
+
+    // If already assigned, just return
+    if (deal.client_id && deal.client_id.toString() !== client_id) {
+      return res
+        .status(400)
+        .json({ message: "Deal already assigned to another client" });
+    }
+
+    // Assign client
+    deal.client_id = client_id;
+    await deal.save();
+
+    // Optional: create first message
+    await Message.create({
+      deal_id: deal._id,
+      sender: client_id,
+      content: "Hi, I’m interested in this listing",
+    });
+
+    return res.status(200).json({
+      message: "Client assigned to deal successfully",
+      deal,
+    });
+  } catch (error) {
+    console.error("Error in AssignClientToDeal:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };

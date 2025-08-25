@@ -10,7 +10,7 @@ const CommissionSchema = new Schema({
     ref: "User",
     required: true,
   },
-  buyer_id: {
+  client_id: {
     type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
@@ -37,10 +37,11 @@ const CommissionSchema = new Schema({
     type: Number,
     required: true,
   },
-  buyer_share: {
+  client_share: {
     type: Number,
     required: true,
   },
+  
 });
 
 export const Commission = model("Commission", CommissionSchema);

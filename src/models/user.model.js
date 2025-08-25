@@ -38,7 +38,10 @@ const UserSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    otp: String,
+    otpExpiry: Date,
   },
+
 
   { timestamps: true }
 );

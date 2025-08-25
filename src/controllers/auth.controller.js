@@ -2,6 +2,8 @@ import { User } from "../models/user.model.js";
 import { Admin } from "../models/admin.model.js";
 import { createToken } from "../utils/jwtUtils.js";
 import bcrypt from "bcrypt";
+import { sendOtp } from "../utils/OTP.js";
+
 
 export const Register = async (req, res) => {
   const { firstName, lastName, email, userType, phoneNumber, password } =
@@ -265,27 +267,90 @@ export const verifyUser = async (req, res) => {
   }
 };
 
-export const ForgotPassword = async (req, res) => {
-  const { phoneNumber, newPassword } = req.body;
+// export const ForgotPassword = async (req, res) => {
+//   const { phoneNumber, newPassword } = req.body;
 
-  if (!phoneNumber || !newPassword) {
-    return res.status(500).json({ message: "Required Fields missing" });
-  }
+//   if (!phoneNumber || !newPassword) {
+//     return res.status(500).json({ message: "Required Fields missing" });
+//   }
+
+//   try {
+//     const user = await User.findOne({ phoneNumber });
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     const newHash = await bcrypt.hash(newPassword, 10);
+
+//     user.password = newHash;
+//     await user.save();
+
+//     return res.status(200).json({ message: "Password updated successfully" });
+//   } catch (error) {
+//     console.error("Error while processing forgot password: ", error);
+//     return res.status(500).json({ message: "Server Error" });
+//   }
+// };
+
+
+export const forgotPassword = async (req, res) => {
+  const { email, phoneNumber } = req.body;
 
   try {
-    const user = await User.findOne({ phoneNumber });
+    // Find user by email or phone
+    const user = await User.findOne(email ? { email } : { phoneNumber });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const newHash = await bcrypt.hash(newPassword, 10);
+    // Generate and send OTP
+    const receiverEmail = user.email;
+    const otp = await sendOtp(receiverEmail);
 
-    user.password = newHash;
+    // Save OTP and expiry (5 minutes from now)
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 5 * 60 * 1000;
     await user.save();
 
-    return res.status(200).json({ message: "Password updated successfully" });
+    return res.status(200).json({
+      message: "OTP sent to your email",
+      userId: user._id, // send this to frontend for later verification
+    });
   } catch (error) {
-    console.error("Error while processing forgot password: ", error);
+    console.error("Error in forgot password:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+export const verifyOtp = async (req, res) => {
+  const { userId, otp, newPassword } = req.body;
+
+  if (!userId || !otp || !newPassword) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user || !user.otp || !user.otpExpiry) {
+      return res.status(404).json({ message: "OTP not requested or expired" });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    // Update password & clear OTP
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Error in verifyOtp:", error);
     return res.status(500).json({ message: "Server Error" });
   }
 };

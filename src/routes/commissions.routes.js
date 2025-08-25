@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   GetBrokerCommissions,
+  GetCommissionByListingId,
   GetCommissions,
 } from "../controllers/commission.controller.js";
 
@@ -78,7 +79,7 @@ const router = Router();
  */
 
 router.get("/get-all-commissions", GetCommissions);
-
+router.get("/getcommissionid",GetCommissionByListingId)
 /**
  * @swagger
  * /api/commissions/broker:

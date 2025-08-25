@@ -4,6 +4,7 @@ import {
   fetchListing,
   fetchListingById,
   fetchListingCount,
+  getAssignedListings,
   MyListings,
   SetListingToBroker,
   verifyListing,
@@ -584,5 +585,6 @@ router.patch("/assign-to-broker", SetListingToBroker);
  */
 
 router.get("/my-listings/:id", MyListings);
+router.get("/fetchassigedlisting",getAssignedListings);
 
 export default router;
