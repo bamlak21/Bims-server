@@ -27,7 +27,7 @@ export const GetBrokerCommissions = async (req, res) => {
   }
 
   try {
-    const commissions = await s.find({ broker_id: id }).lean();
+    const commissions = await Commission.find({ broker_id: id }).lean();
 
     if (!commissions) {
       return res
