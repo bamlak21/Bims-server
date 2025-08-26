@@ -15,7 +15,7 @@ export const GetCommissions = async (req, res) => {
     return res.status(200).json({ message: "Success", commission });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Server Error" }); 
+    return res.status(500).json({ message: "Server Error" });
   }
 };
 
@@ -62,3 +62,5 @@ export const GetCommissionByListingId = async (req, res) => {
     return res.status(500).json({ message: "Server Error" });
   }
 };
+
+// export const

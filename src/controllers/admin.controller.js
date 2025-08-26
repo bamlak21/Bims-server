@@ -1,5 +1,5 @@
 import { Property } from "../models/property.model.js";
-import { Vehicle } from "../models/vechicle.model.js";
+import { Vehicle } from "../models/vehicle.model.js";
 
 export const RejectListing = async (req, res) => {
   const { id, type, reason } = req.body;

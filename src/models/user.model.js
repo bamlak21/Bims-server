@@ -5,7 +5,12 @@ const UserSchema = new Schema(
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    userType: { type: String, required: true, default: "client" },
+    userType: {
+      type: String,
+      required: true,
+      enum: ["client", "broker", "admin"],
+      default: "client",
+    },
     phoneNumber: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     photo: { type: String, default: "" },
@@ -33,6 +38,7 @@ const UserSchema = new Schema(
       type: String,
       default: "",
     },
+    is_blocked: { type: Boolean, default: false },
     verified: { type: Boolean, default: true },
     isActive: {
       type: Boolean,
@@ -41,7 +47,6 @@ const UserSchema = new Schema(
     otp: String,
     otpExpiry: Date,
   },
-
 
   { timestamps: true }
 );

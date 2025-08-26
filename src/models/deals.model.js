@@ -1,11 +1,23 @@
 import mongoose from "mongoose";
 const DealSchema = new mongoose.Schema(
   {
-    broker_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    owner_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    broker_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    owner_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     client_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     listing_id: { type: mongoose.Schema.Types.ObjectId, required: true },
-    listing_type: { type: String, enum: ["property", "vehicle"], required: true },
+    listing_type: {
+      type: String,
+      enum: ["property", "vehicle"],
+      required: true,
+    },
     status: {
       type: String,
       enum: ["negotiating", "agreement", "completed", "cancelled"],

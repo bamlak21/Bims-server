@@ -9,7 +9,14 @@ const NotificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ["request", "assignment", "status_update", "message", "payment"],
+      enum: [
+        "request",
+        "verification",
+        "assignment",
+        "status_update",
+        "message",
+        "rejection",
+      ],
       required: true,
     },
     listing_id: {

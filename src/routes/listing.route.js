@@ -3,6 +3,7 @@ import {
   CreateListing,
   fetchListing,
   fetchListingById,
+  fetchListingByStatus,
   fetchListingCount,
   getAssignedListings,
   MyListings,
@@ -316,6 +317,59 @@ router.get("/fetch", fetchListing);
 
 /**
  * @swagger
+ * /api/listing/fetchByStatus:
+ *   get:
+ *     summary: Get total listings count by status
+ *     description: Returns the total number of vehicles and properties that match a given status.
+ *     tags:
+ *       - Listings
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Status to filter listings (e.g., "approved", "pending", "rejected")
+ *     responses:
+ *       200:
+ *         description: Success — total count of listings matching the given status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 approvedListing:
+ *                   type: integer
+ *                   example: 42
+ *       400:
+ *         description: Missing required query parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Required Fields missing
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+
+router.get("/fetchByStatus", fetchListingByStatus);
+
+/**
+ * @swagger
  * /api/listing/fetchListing:
  *   get:
  *     summary: Fetch a listing (vehicle or property) by ID.
@@ -585,6 +639,6 @@ router.patch("/assign-to-broker", SetListingToBroker);
  */
 
 router.get("/my-listings/:id", MyListings);
-router.get("/fetchassigedlisting",getAssignedListings);
+router.get("/fetchassigedlisting", getAssignedListings);
 
 export default router;

@@ -26,7 +26,7 @@ export const verifyToken = (token) => {
     const decoded = jwt.verify(token, secret);
     return decoded;
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return;
   }
 };

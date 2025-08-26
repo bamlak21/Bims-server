@@ -1,27 +1,26 @@
-import {Deal} from '../models/deals.model.js';
-import {Property} from '../models/property.model.js';
-import {Vehicle} from '../models/vechicle.model.js';
-
+import { Deal } from "../models/deals.model.js";
+import { Property } from "../models/property.model.js";
+import { Vehicle } from "../models/vehicle.model.js";
 
 export const getDealsByBroker = async (req, res) => {
   try {
     const { brokerId, status } = req.query;
 
     if (!brokerId) {
-      return res.status(400).json({ message: 'Missing brokerId' });
+      return res.status(400).json({ message: "Missing brokerId" });
     }
 
     const query = { broker_id: brokerId };
     if (status) query.status = status;
 
     const deals = await Deal.find(query)
-      .populate('listing_id')
+      .populate("listing_id")
       .sort({ createdAt: -1 });
 
     res.json(deals);
   } catch (err) {
-    console.error('Error fetching deals:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching deals:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -44,16 +43,14 @@ export const getDealById = async (req, res) => {
     }
 
     return res.json({
-       ...deal.toObject(),
+      ...deal.toObject(),
       listing,
     });
   } catch (err) {
     console.error("Error fetching deal:", err);
     res.status(500).json({ message: "Server error" });
   }
-}
-
-
+};
 
 // export const getBrokerDeals = async (req, res) => {
 //   const { brokerId } = req.query;

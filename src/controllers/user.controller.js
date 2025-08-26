@@ -158,3 +158,16 @@ export const deactivateUser = async (req, res) => {
     res.status(500).json({ message: "Server error while deactivating user" });
   }
 };
+
+export const GetBrokers = async (req, res) => {
+  try {
+    const brokers = await User.find({ userType: "broker" })
+      .select("firstName lastName email phoneNumber socialLinks photo verified")
+      .lean();
+
+    return res.status(200).json({ message: "Success", brokers });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};

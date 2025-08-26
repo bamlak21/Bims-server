@@ -1,6 +1,7 @@
 import { Property } from "../models/property.model.js";
-import { Vehicle } from "../models/vechicle.model.js";
-import {Deal} from '../models/deals.model.js';
+import { Vehicle } from "../models/vehicle.model.js";
+import { Deal } from "../models/deals.model.js";
+import { CreateNotification } from "../services/notificationService.js";
 
 export const CreateListing = async (req, res) => {
   const {
@@ -166,7 +167,7 @@ export const fetchListing = async (req, res) => {
     const fetchData = (Model, type) =>
       Model.find(buildFilter(type))
         .populate("owner_id", "firstName lastName")
-        .populate("broker_id", "firstName lastName") 
+        .populate("broker_id", "firstName lastName")
         .sort({ created_at: -1 })
         .lean()
         .then((data) =>
@@ -212,7 +213,6 @@ export const fetchListing = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 
 export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
@@ -269,6 +269,14 @@ export const verifyListing = async (req, res) => {
     listing.rejection_reason = status === "rejected" ? reason : null;
     await listing.save();
 
+    await CreateNotification({
+      userId: listing.owner_id,
+      type: listing.status === "rejected" ? "rejection" : "approved",
+      listing_id: listing._id,
+      listing_type: listing.type,
+      message: listing.status === "rejected" ? listing.rejection_reason : "",
+    });
+
     return res.status(200).json({
       message: `Listing ${status} successfully`,
       verified: status === "approved",
@@ -289,10 +297,11 @@ export const fetchListingById = async (req, res) => {
 
   try {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
-    const listing = await model.findById(id)
-    .populate("broker_id", "firstName lastName email")
-    .populate("owner_id", "firstName lastName email")
-    .lean();
+    const listing = await model
+      .findById(id)
+      .populate("broker_id", "firstName lastName email")
+      .populate("owner_id", "firstName lastName email")
+      .lean();
     console.log(listing);
 
     return res.status(200).json({ message: "Success", listing });
@@ -307,62 +316,42 @@ export const SetListingToBroker = async (req, res) => {
   const { is_broker_assigned } = req.body;
 
   if (!listingId || !broker_id || !type) {
-    return res.status(400).json({ message: 'Missing required parameters' });
+    return res.status(400).json({ message: "Missing required parameters" });
   }
-   const normalizedType =
+  const normalizedType =
     type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
   try {
-    const model = normalizedType === 'Vehicle' ? Vehicle : Property;
+    const model = normalizedType === "Vehicle" ? Vehicle : Property;
     const listing = await model.findById(listingId);
 
     if (!listing) {
-      return res.status(404).json({ message: 'Listing not found' });
+      return res.status(404).json({ message: "Listing not found" });
     }
 
     if (listing.broker_id && listing.broker_id.toString() !== broker_id) {
-      return res.status(400).json({ message: 'Listing already assigned to another broker' });
+      return res
+        .status(400)
+        .json({ message: "Listing already assigned to another broker" });
     }
 
-    listing.broker_id = broker_id?broker_id:null;
-    listing.is_broker_assigned = is_broker_assigned?true:false;
+    listing.broker_id = broker_id ? broker_id : null;
+    listing.is_broker_assigned = is_broker_assigned ? true : false;
     await listing.save();
 
-  //   // ✅ Check if deal already exists
-    const existingDeal = await Deal.findOne({
-      listing_id: listingId,
-      broker_id,
-      type,
+    await CreateNotification({
+      id: listing.owner_id,
     });
-
-    if (!existingDeal) {
-      await Deal.create({
-         listing_id: listingId,
-  broker_id,
-  owner_id: listing.owner_id,
-  title:listing.title,
-  listing_type: type,
-  status: 'negotiating', 
-  listing_snapshot: {
-          title: listing.title,
-          description: listing.description,
-          price: listing.price,
-          location: listing.location,
-          images: listing.image_paths || listing.images || [],
-        },
-      });
-    }
-
     return res.status(200).json({
-      message: 'Broker assigned and deal created successfully',
+      message: "Broker assigned and deal created successfully",
       listing,
     });
   } catch (error) {
-    console.error('Error in SetListingToBroker:', error);
-    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    console.error("Error in SetListingToBroker:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
-
-
 
 export const MyListings = async (req, res) => {
   const { id } = req.params;
@@ -394,23 +383,25 @@ export const getAssignedListings = async (req, res) => {
   const { brokerId, type } = req.query;
 
   if (!brokerId || !type) {
-    return res.status(400).json({ message: 'Missing brokerId or type' });
+    return res.status(400).json({ message: "Missing brokerId or type" });
   }
-    const normalizedType =
+  const normalizedType =
     type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 
   try {
-    const model = normalizedType === 'Vehicle' ? Vehicle : Property;
+    const model = normalizedType === "Vehicle" ? Vehicle : Property;
 
-    const listings = await model.find({
-      broker_id: brokerId,
-      is_broker_assigned: true,
-    }).sort({ createdAt: -1 });
+    const listings = await model
+      .find({
+        broker_id: brokerId,
+        is_broker_assigned: true,
+      })
+      .sort({ createdAt: -1 });
 
     res.status(200).json(listings);
   } catch (error) {
-    console.error('Error fetching assigned listings:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching assigned listings:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 export const AssignClientToDeal = async (req, res) => {
@@ -457,5 +448,27 @@ export const AssignClientToDeal = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+export const fetchListingByStatus = async (req, res) => {
+  const { status } = req.query;
+
+  if (!status) {
+    return res.status(400).json({ message: "Required Fields missing" });
+  }
+
+  try {
+    const [vehicle, property] = await Promise.all([
+      Vehicle.countDocuments({ status: status }),
+      Property.countDocuments({ status: status }),
+    ]);
+
+    return res
+      .status(200)
+      .json({ message: "Success", listing: vehicle + property });
+  } catch (error) {
+    console.log(err);
+    return res.status(500).json({ message: "Server Error" });
   }
 };

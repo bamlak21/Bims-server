@@ -13,7 +13,7 @@ function generateOtp() {
     .padStart(6, "0");
 }
 
-export async function send(receiverEmail) {
+export async function sendOtp(receiverEmail) {
   const SENDER_EMAIL = "hello@nileode.com";
   const otp = generateOtp();
   const sender = { name: "Bamlak", email: "hello@bamlak.dev" };

@@ -3,7 +3,7 @@ import { Admin } from "../models/admin.model.js";
 import { createToken } from "../utils/jwtUtils.js";
 import bcrypt from "bcrypt";
 import { sendOtp } from "../utils/OTP.js";
-
+import { CreateNotification } from "../services/notificationService.js";
 
 export const Register = async (req, res) => {
   const { firstName, lastName, email, userType, phoneNumber, password } =
@@ -53,6 +53,12 @@ export const Register = async (req, res) => {
     if (userType === "broker") {
       newUser.verified = false;
       await newUser.save();
+      await CreateNotification({
+        userId: newUser._id,
+        type: "verification",
+        message:
+          "welcome, Account going through verification. We will notify you when it's done.",
+      });
       if (!req.file) {
         return res
           .status(400)
@@ -71,7 +77,11 @@ export const Register = async (req, res) => {
     }
 
     await newUser.save();
-
+    await CreateNotification({
+      userId: newUser._id,
+      type: "New user",
+      message: "Welcome to Bims, Browse around to use.",
+    });
     const token = createToken(newUser);
 
     return res.status(201).json({
@@ -291,7 +301,6 @@ export const verifyUser = async (req, res) => {
 //     return res.status(500).json({ message: "Server Error" });
 //   }
 // };
-
 
 export const forgotPassword = async (req, res) => {
   const { email, phoneNumber } = req.body;

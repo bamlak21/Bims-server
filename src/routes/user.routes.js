@@ -6,6 +6,7 @@ import {
   UpdateUserProfile,
   deactivateUser,
   fetchAllUsers,
+  GetBrokers,
 } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 const router = Router();
@@ -285,4 +286,59 @@ router.get("/userstats", getUserStats);
 
 router.patch("/deactivate/:id", deactivateUser);
 
+/**
+ * @swagger
+ * /api/user/brokers:
+ *   get:
+ *     summary: Get all brokers
+ *     description: Retrieve a list of all users with userType "broker". Sensitive fields like passwords are not returned.
+ *     tags:
+ *       - Brokers
+ *     responses:
+ *       200:
+ *         description: List of brokers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 brokers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       firstName:
+ *                         type: string
+ *                         example: John
+ *                       lastName:
+ *                         type: string
+ *                         example: Doe
+ *                       email:
+ *                         type: string
+ *                         example: john@example.com
+ *                       phoneNumber:
+ *                         type: string
+ *                         example: "+1234567890"
+ *                       socialLinks:
+ *                         type: object
+ *                         example: { linkedin: "https://linkedin.com/in/john", twitter: "https://twitter.com/john" }
+ *                       photo:
+ *                         type: string
+ *                         example: "https://example.com/photo.jpg"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+
+router.get("/brokers", GetBrokers);
 export default router;
