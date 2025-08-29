@@ -3,11 +3,9 @@ import { Notifications } from "../models/notifications.model.js";
 export const GetNotifications = async (req, res) => {
   const userId = req.user.id;
 
-  const { page = 1, limit = 10, read } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
-  const query = { user_id: userId, is_read: read };
-  if (read === true) return (query.is_read = true);
-  else if (read === false) return (query.is_read = false);
+  const query = { user_id: userId };
 
   try {
     const notifications = await Notifications.find(query)
