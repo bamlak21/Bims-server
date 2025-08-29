@@ -274,7 +274,10 @@ export const verifyListing = async (req, res) => {
       type: listing.status === "rejected" ? "rejection" : "approved",
       listing_id: listing._id,
       listing_type: listing.type,
-      message: listing.status === "rejected" ? listing.rejection_reason : "",
+      message:
+        listing.status === "rejected"
+          ? listing.rejection_reason
+          : "Your listing have been approved",
     });
 
     return res.status(200).json({

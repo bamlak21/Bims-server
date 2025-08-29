@@ -10,14 +10,16 @@ export const CreateNotification = async ({
   is_read,
   link,
 }) => {
-  if (
-    !mongoose.Types.ObjectId.isValid(userId) ||
-    !mongoose.Types.ObjectId.isValid(listingId)
-  ) {
-    throw new Error("Id malformed");
+  // Validate required IDs
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid userId");
+  }
+
+  if (listingId && !mongoose.Types.ObjectId.isValid(listingId)) {
+    throw new Error("Invalid listingId");
   }
   try {
-    const notification = new Notifications({
+    const notification = await Notifications.create({
       user_id: userId,
       type: type,
       listing_id: listingId,
@@ -27,8 +29,9 @@ export const CreateNotification = async ({
       link: link,
     });
 
-    return notification.lean();
+    return notification;
   } catch (err) {
-    console.log("Failed to create notification", err);
+    console.error("Failed to create notification:", err);
+    throw new Error("Notification creation failed");
   }
 };

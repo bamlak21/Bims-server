@@ -11,6 +11,7 @@ const NotificationSchema = new Schema(
       type: String,
       enum: [
         "request",
+        "approved",
         "verification",
         "assignment",
         "status_update",

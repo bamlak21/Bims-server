@@ -432,34 +432,42 @@ router.get("/fetchListing", fetchListingById);
  * @swagger
  * /api/listing/verify-listing:
  *   patch:
- *     summary: Verify a listing (vehicle)
- *     description: Updates the status of a vehicle listing by its ID.
+ *     summary: Verify or reject a listing
+ *     description: Admins can approve or reject a vehicle or property listing. If rejected, a reason must be provided. A notification will be sent to the listing owner.
  *     tags:
  *       - Listings
- *     parameters:
- *       - in: query
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the listing to verify.
- *       - in: query
- *         name: status
- *         required: true
- *         schema:
- *           type: string
- *           enum: [approved, rejected, pending]
- *         description: The new status to set for the listing.
- *       - in: query
- *         name: type
- *         required: true
- *         schema:
- *           type: string
- *           enum: [vehicle, property]
- *         description: The type of listing
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - status
+ *               - type
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: Listing ID
+ *                 example: "650abc12345ef67890abcd12"
+ *               status:
+ *                 type: string
+ *                 enum: [approved, rejected]
+ *                 description: Approval status of the listing
+ *                 example: approved
+ *               type:
+ *                 type: string
+ *                 enum: [Vehicle, Property]
+ *                 description: Type of the listing
+ *                 example: Vehicle
+ *               reason:
+ *                 type: string
+ *                 description: Reason for rejection (required if status is rejected)
+ *                 example: Listing contains incomplete or misleading information
  *     responses:
  *       200:
- *         description: Listing verified successfully.
+ *         description: Listing status updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -467,12 +475,22 @@ router.get("/fetchListing", fetchListingById);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Item Verified
- *                 vehicle:
- *                   type: object
- *                   description: The updated vehicle listing details.
+ *                   example: Listing approved successfully
+ *                 verified:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: Bad request due to missing/invalid fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Rejection reason is required
  *       404:
- *         description: Listing not found.
+ *         description: Listing not found
  *         content:
  *           application/json:
  *             schema:
@@ -480,9 +498,9 @@ router.get("/fetchListing", fetchListingById);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Vehicle not found
+ *                   example: Listing not found
  *       500:
- *         description: Server error occurred.
+ *         description: Server error
  *         content:
  *           application/json:
  *             schema:
@@ -490,7 +508,7 @@ router.get("/fetchListing", fetchListingById);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Server error
+ *                   example: Server Error
  */
 
 router.patch("/verify-listing", verifyListing);
