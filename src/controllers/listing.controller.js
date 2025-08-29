@@ -233,7 +233,7 @@ export const fetchListingCount = async (req, res) => {
 };
 
 export const verifyListing = async (req, res) => {
-  const { id, status, type, reason } = req.body;
+  const { id, status, type } = req.body;
 
   if (!id || !status || !type) {
     return res
@@ -248,14 +248,6 @@ export const verifyListing = async (req, res) => {
     return res.status(400).json({ message: "Invalid listing type" });
   }
 
-  if (!["approved", "rejected"].includes(status)) {
-    return res.status(400).json({ message: "Invalid status" });
-  }
-
-  if (status === "rejected" && !reason) {
-    return res.status(400).json({ message: "Rejection reason is required" });
-  }
-
   try {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
 
@@ -265,18 +257,15 @@ export const verifyListing = async (req, res) => {
     }
 
     listing.status = status;
-    listing.rejection_reason = status === "rejected" ? reason : null;
+
     await listing.save();
 
     await CreateNotification({
       userId: listing.owner_id,
-      type: listing.status === "rejected" ? "rejection" : "approved",
+      type: "approved",
       listing_id: listing._id,
       listing_type: listing.type,
-      message:
-        listing.status === "rejected"
-          ? listing.rejection_reason
-          : "Your listing have been approved",
+      message: "Your listing have been approved",
     });
 
     return res.status(200).json({
