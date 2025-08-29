@@ -233,8 +233,7 @@ export const fetchListingCount = async (req, res) => {
 };
 
 export const verifyListing = async (req, res) => {
-  const { id, status, type } = req.query;
-  const reason = req.body ? req.body.reason : null;
+  const { id, status, type, reason } = req.body;
 
   if (!id || !status || !type) {
     return res

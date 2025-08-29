@@ -1,7 +1,8 @@
 import { Notifications } from "../models/notifications.model.js";
 
 export const GetNotifications = async (req, res) => {
-  const userId = req.user._id;
+  const userId = req.user.id;
+
   const { page = 1, limit = 10, read } = req.query;
 
   const query = { user_id: userId };
