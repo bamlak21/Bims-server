@@ -31,7 +31,7 @@ export const GetNotifications = async (req, res) => {
 };
 
 export const markNotificationAsRead = async (req, res) => {
-  const userId = req.user._id;
+  const userId = req.user.id;
   const { id } = req.params;
 
   try {
@@ -53,7 +53,7 @@ export const markNotificationAsRead = async (req, res) => {
 };
 
 export const markAllNotificationsAsRead = async (req, res) => {
-  const userId = req.user._id;
+  const userId = req.user.id;
 
   try {
     await Notifications.updateMany(
