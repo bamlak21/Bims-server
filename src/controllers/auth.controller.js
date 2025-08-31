@@ -79,7 +79,7 @@ export const Register = async (req, res) => {
     await newUser.save();
     await CreateNotification({
       userId: newUser._id,
-      type: "New user",
+      type: "new_user",
       message: "Welcome to Bims, Browse around to use.",
     });
     const token = createToken(newUser);

@@ -7,6 +7,7 @@ import {
   deactivateUser,
   fetchAllUsers,
   GetBrokers,
+  GetBrokerById,
 } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 const router = Router();
@@ -341,4 +342,6 @@ router.patch("/deactivate/:id", deactivateUser);
  */
 
 router.get("/brokers", GetBrokers);
+router.get("/brokers/:id",GetBrokerById);
 export default router;
+

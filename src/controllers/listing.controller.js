@@ -2,6 +2,7 @@ import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { Deal } from "../models/deals.model.js";
 import { CreateNotification } from "../services/notificationService.js";
+import { User } from "../models/user.model.js";
 
 export const CreateListing = async (req, res) => {
   const {

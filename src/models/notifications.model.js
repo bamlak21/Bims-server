@@ -17,6 +17,7 @@ const NotificationSchema = new Schema(
         "status_update",
         "message",
         "rejection",
+        "new_user",
       ],
       required: true,
     },

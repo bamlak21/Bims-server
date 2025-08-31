@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 
 export const getUserStats = async (req, res) => {
   try {
@@ -81,7 +82,7 @@ export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select(
-      "firstName lastName email phoneNumber userType photo verified createdAt"
+      "firstName lastName email phoneNumber userType photo verified createdAt address"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -94,7 +95,7 @@ export const getCurrentUserProfile = async (req, res) => {
 };
 
 export const UpdateUserProfile = async (req, res) => {
-  const { id, firstName, lastName, email, phoneNumber, socialLinks } = req.body;
+  const { id, firstName, lastName, email, phoneNumber, socialLinks,address } = req.body;
 
   try {
     const user = await User.findById(id);
@@ -108,10 +109,22 @@ export const UpdateUserProfile = async (req, res) => {
     if (email && email.trim() !== "") user.email = email;
     if (phoneNumber && phoneNumber.trim() !== "")
       user.phoneNumber = phoneNumber;
-    if (socialLinks && typeof socialLinks === "object")
-      user.socialLinks = socialLinks;
+    if (socialLinks) {
+      const parsedLinks = typeof socialLinks === "string" ? JSON.parse(socialLinks) : socialLinks;
+
+      const existingLinks = user.socialLinks
+        ? Object.fromEntries(user.socialLinks)
+        : {};
+
+      user.socialLinks = { ...existingLinks, ...parsedLinks };
+ 
+    }
     if (req.file) {
       user.photo = req.file.path.replace(/\\/g, "/");
+    }
+    if (address) {
+      const parsedLocation = typeof address === "string" ? JSON.parse(address) : address;
+      user.address = parsedLocation;
     }
 
     await user.save();
@@ -166,6 +179,27 @@ export const GetBrokers = async (req, res) => {
       .lean();
 
     return res.status(200).json({ message: "Success", brokers });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+export const GetBrokerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid broker ID" });
+    }
+
+    const broker = await User.findOne({ _id: id, userType: "broker" })
+      .select("firstName lastName email phoneNumber socialLinks photo verified")
+      .lean();
+
+    if (!broker) {
+      return res.status(404).json({ message: "Broker not found" });
+    }
+
+    return res.status(200).json({ message: "Success", broker });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server Error" });

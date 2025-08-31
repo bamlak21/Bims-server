@@ -15,10 +15,16 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     photo: { type: String, default: "" },
     socialLinks: {
-      whatsapp: { type: String },
-      telegram: { type: String },
-      tiktok: { type: String },
-    },
+    type: Map,
+    of: String,
+    default: {},
+  },
+  address: {
+    city: String,
+    subcity: String,
+    woreda: String,
+    detailedAddress: String,
+  },
     documentVerification: {
       status: {
         type: String,
@@ -47,6 +53,7 @@ const UserSchema = new Schema(
     otp: String,
     otpExpiry: Date,
   },
+  
 
   { timestamps: true }
 );
