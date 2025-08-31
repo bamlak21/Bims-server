@@ -304,7 +304,7 @@ export const fetchListingById = async (req, res) => {
 };
 
 export const SetListingToBroker = async (req, res) => {
-  const { listingId, broker_id, type } = req.query;
+  const { listingId, broker_id, type,owner_id } = req.query;
   const { is_broker_assigned } = req.body;
 
   if (!listingId || !broker_id || !type) {
@@ -331,7 +331,11 @@ export const SetListingToBroker = async (req, res) => {
     await listing.save();
 
     await CreateNotification({
-      id: listing.owner_id,
+      userId: listing.owner_id,
+      type:"assignment",
+      listing_id: listing._id,
+      listing_type: listing.type,
+      message:"Broker Assigned to Your Listing"
     });
     return res.status(200).json({
       message: "Broker assigned and deal created successfully",
@@ -462,5 +466,36 @@ export const fetchListingByStatus = async (req, res) => {
   } catch (error) {
     console.log(err);
     return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const countApprovedListings = async (req, res) => {
+  try {
+    const { type = "all" } = req.query;
+
+    let vehicleCount = 0;
+    let propertyCount = 0;
+
+    if (type === "vehicle" || type === "all") {
+      vehicleCount = await Vehicle.countDocuments({ status: "approved" });
+    }
+
+    if (type === "property" || type === "all") {
+      propertyCount = await Property.countDocuments({ status: "approved" });
+    }
+
+    const totalCount = vehicleCount + propertyCount;
+
+    return res.status(200).json({
+      message: "Approved listings count fetched successfully",
+      counts: {
+        vehicles: vehicleCount,
+        properties: propertyCount,
+        total: totalCount,
+      },
+    });
+  } catch (err) {
+    console.error("Error counting approved listings:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };

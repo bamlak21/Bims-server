@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  countApprovedListings,
   CreateListing,
   fetchListing,
   fetchListingById,
@@ -657,6 +658,7 @@ router.patch("/assign-to-broker", SetListingToBroker);
  */
 
 router.get("/my-listings/:id", MyListings);
-router.get("/fetchassigedlisting", getAssignedListings);
+router.get("/fetchassignedlisting", getAssignedListings);
+router.get("/count-approved",countApprovedListings)
 
 export default router;
