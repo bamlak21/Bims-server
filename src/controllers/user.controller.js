@@ -1,5 +1,9 @@
 import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
+import { Vehicle } from "../models/vehicle.model.js";
+import { Property } from "../models/property.model.js";
+import { Deal } from "../models/deals.model.js";
+import { Commission } from "../models/commision.model.js";
 
 export const getUserStats = async (req, res) => {
   try {
@@ -95,7 +99,8 @@ export const getCurrentUserProfile = async (req, res) => {
 };
 
 export const UpdateUserProfile = async (req, res) => {
-  const { id, firstName, lastName, email, phoneNumber, socialLinks,address } = req.body;
+  const { id, firstName, lastName, email, phoneNumber, socialLinks, address } =
+    req.body;
 
   try {
     const user = await User.findById(id);
@@ -110,20 +115,21 @@ export const UpdateUserProfile = async (req, res) => {
     if (phoneNumber && phoneNumber.trim() !== "")
       user.phoneNumber = phoneNumber;
     if (socialLinks) {
-      const parsedLinks = typeof socialLinks === "string" ? JSON.parse(socialLinks) : socialLinks;
+      const parsedLinks =
+        typeof socialLinks === "string" ? JSON.parse(socialLinks) : socialLinks;
 
       const existingLinks = user.socialLinks
         ? Object.fromEntries(user.socialLinks)
         : {};
 
       user.socialLinks = { ...existingLinks, ...parsedLinks };
- 
     }
     if (req.file) {
       user.photo = req.file.path.replace(/\\/g, "/");
     }
     if (address) {
-      const parsedLocation = typeof address === "string" ? JSON.parse(address) : address;
+      const parsedLocation =
+        typeof address === "string" ? JSON.parse(address) : address;
       user.address = parsedLocation;
     }
 
@@ -200,6 +206,34 @@ export const GetBrokerById = async (req, res) => {
     }
 
     return res.status(200).json({ message: "Success", broker });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const GetBrokerAnalytics = async (req, res) => {
+  const { brokerId } = req.query;
+
+  try {
+    const vehicles = await Vehicle.countDocuments({ broker_id: brokerId });
+    const property = await Property.countDocuments({ broker_id: brokerId });
+
+    const totalListing = vehicles + property;
+    const totalDeals = await Deal.countDocuments({
+      broker_id: brokerId,
+      status: "completed",
+    });
+    const totalCommissions = await Commission.countDocuments({
+      broker_id: brokerId,
+    });
+
+    return res.status(200).json({
+      message: "Success",
+      totalCommissions: totalCommissions,
+      totalDeals: totalDeals,
+      totalListing: totalListing,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server Error" });
