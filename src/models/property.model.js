@@ -46,6 +46,7 @@ const PropertySchema = new mongoose.Schema(
     },
     rejection_reason: { type: String, default: "" },
   },
+  
   { timestamps: true }
 );
 
