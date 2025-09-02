@@ -8,6 +8,7 @@ import {
   fetchListingCount,
   getAssignedListings,
   MyListings,
+  SaveListing,
   SetListingToBroker,
   verifyListing,
 } from "../controllers/listing.controller.js";
@@ -658,7 +659,58 @@ router.patch("/assign-to-broker", SetListingToBroker);
  */
 
 router.get("/my-listings/:id", MyListings);
+
+/**
+ * @swagger
+ * /api/listing/save-listing:
+ *   patch:
+ *     summary: Save a listing to the user's saved listings
+ *     tags:
+ *       - Listings
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - listingId
+ *               - listingType
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user
+ *               listingId:
+ *                 type: string
+ *                 description: The ID of the listing
+ *               listingType:
+ *                 type: string
+ *                 enum: [TypeA, TypeB]
+ *                 description: The type of the listing
+ *     responses:
+ *       200:
+ *         description: Listing added to saved listings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Missing required fields
+ *       404:
+ *         description: Invalid IDs or user not found
+ *       500:
+ *         description: Server error
+ */
+
+router.patch("/save-listing", SaveListing);
+
 router.get("/fetchassignedlisting", getAssignedListings);
-router.get("/count-approved",countApprovedListings)
+router.get("/count-approved", countApprovedListings);
 
 export default router;

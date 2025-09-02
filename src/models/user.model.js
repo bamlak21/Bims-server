@@ -15,16 +15,16 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     photo: { type: String, default: "" },
     socialLinks: {
-    type: Map,
-    of: String,
-    default: {},
-  },
-  address: {
-    city: String,
-    subcity: String,
-    woreda: String,
-    detailedAddress: String,
-  },
+      type: Map,
+      of: String,
+      default: {},
+    },
+    address: {
+      city: String,
+      subcity: String,
+      woreda: String,
+      detailedAddress: String,
+    },
     documentVerification: {
       status: {
         type: String,
@@ -52,8 +52,17 @@ const UserSchema = new Schema(
     },
     otp: String,
     otpExpiry: Date,
+    saved: [
+      {
+        listingId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        listingType: {
+          type: String,
+          enum: ["Vehicle", "Property"], // or use model names
+          required: true,
+        },
+      },
+    ],
   },
-  
 
   { timestamps: true }
 );

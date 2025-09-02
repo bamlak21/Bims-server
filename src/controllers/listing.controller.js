@@ -3,6 +3,7 @@ import { Vehicle } from "../models/vehicle.model.js";
 import { Deal } from "../models/deals.model.js";
 import { CreateNotification } from "../services/notificationService.js";
 import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 
 export const CreateListing = async (req, res) => {
   const {
@@ -304,7 +305,7 @@ export const fetchListingById = async (req, res) => {
 };
 
 export const SetListingToBroker = async (req, res) => {
-  const { listingId, broker_id, type,owner_id } = req.query;
+  const { listingId, broker_id, type, owner_id } = req.query;
   const { is_broker_assigned } = req.body;
 
   if (!listingId || !broker_id || !type) {
@@ -332,10 +333,10 @@ export const SetListingToBroker = async (req, res) => {
 
     await CreateNotification({
       userId: listing.owner_id,
-      type:"assignment",
+      type: "assignment",
       listing_id: listing._id,
       listing_type: listing.type,
-      message:"Broker Assigned to Your Listing"
+      message: "Broker Assigned to Your Listing",
     });
     return res.status(200).json({
       message: "Broker assigned and deal created successfully",
@@ -497,5 +498,39 @@ export const countApprovedListings = async (req, res) => {
   } catch (err) {
     console.error("Error counting approved listings:", err);
     return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const SaveListing = async (req, res) => {
+  const { listingId, userId, listingType } = req.body;
+
+  if (!listingId || !userId || !listingType) {
+    return res.status(400).json({ message: "Missing Required fields" });
+  }
+
+  if (
+    !mongoose.Types.ObjectId.isValid(listingId) ||
+    !mongoose.Types.ObjectId.isValid(userId)
+  ) {
+    return res.status(404).json({ message: "Sent fields not working" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    const alreadySaved = user.saved.some(
+      (item) =>
+        item.listingId.equals(listingId) && item.listingType === listingType
+    );
+    if (alreadySaved) return user;
+
+    user.saved.push({ listingId, listingType });
+    await user.save();
+
+    return res
+      .status(200)
+      .json({ message: "Listing added to Saved listings", user });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server Error" });
   }
 };
