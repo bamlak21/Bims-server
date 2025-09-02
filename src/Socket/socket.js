@@ -15,7 +15,7 @@ export function RegisterSocket(io) {
       } else {
         // check if a room already exists with the same participants (ignoring order)
         room = await ChatRoom.findOne({
-          participants: { $all: participants, $size: participants.length },
+          participants: { $all: participants },
         });
 
         if (!room) {

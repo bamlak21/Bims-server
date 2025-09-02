@@ -9,6 +9,7 @@ import notificationsRouter from "./routes/notifications.routes.js";
 import commissionsRouter from "./routes/commissions.routes.js";
 import dealsRouter from "./routes/deals.routes.js";
 import reportRoute from "./routes/report.routes.js";
+import chatRoute from "./routes/chat.routes.js";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { swaggerOptions } from "./config/swaggerConfig.js";
@@ -23,7 +24,7 @@ console.log("JWT_SECRET:", process.env.JWT_SECRET);
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: "*",
+  cors: "http://localhost:5173",
   methods: ["GET", "POST"],
 });
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
@@ -49,6 +50,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/commissions", commissionsRouter);
 app.use("/api/deals", dealsRouter);
 app.use("/api/report", reportRoute);
+app.use("/api/chat", chatRoute);
 app.use("/uploads", express.static("uploads"));
 
 async function StartServer() {
