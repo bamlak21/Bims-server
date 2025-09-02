@@ -127,31 +127,25 @@ export const fetchListing = async (req, res) => {
       minPrice,
       maxPrice,
       category,
-      search, // renamed from searchTerm
+      search,
     } = req.query;
 
+    const userId = req.user?.id; // assuming you set user in auth middleware
     const skip = (page - 1) * limit;
     const pagination = { page: Number(page), limit: Number(limit) };
 
-    // Helper to build filters
     const buildFilter = (type) => {
       const filter = {};
-
-      // Apply price filter
       if (minPrice || maxPrice) {
         filter.price = {};
         if (minPrice) filter.price.$gte = Number(minPrice);
         if (maxPrice) filter.price.$lte = Number(maxPrice);
       }
-
-      // Category
       if (category && category !== "all") {
         filter.category = category;
       }
-
-      // Search by title or location
       if (search) {
-        const regex = new RegExp(search, "i"); // case-insensitive
+        const regex = new RegExp(search, "i");
         if (type === "property") {
           filter.$or = [
             { title: regex },
@@ -162,7 +156,6 @@ export const fetchListing = async (req, res) => {
           filter.$or = [{ title: regex }];
         }
       }
-
       return filter;
     };
 
@@ -188,18 +181,33 @@ export const fetchListing = async (req, res) => {
     let vehicles = [];
     let properties = [];
 
-    if (type === "vehicle" || type === "all") {
-      vehicles = await fetchData(Vehicle, "vehicle");
+    if (type === "Vehicle" || type === "all") {
+      vehicles = await fetchData(Vehicle, "Vehicle");
+    }
+    if (type === "Property" || type === "all") {
+      properties = await fetchData(Property, "Property");
     }
 
-    if (type === "property" || type === "all") {
-      properties = await fetchData(Property, "property");
-    }
-
-    // Combine and sort
     let listings = [...vehicles, ...properties].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
+
+    // ✅ Mark saved listings
+    if (userId) {
+      const user = await User.findById(userId).lean();
+      const savedSet = new Set(
+  user.saved.map(
+    (s) => `${s.listingId.toString()}-${s.listingType.toUpperCase()}`
+  )
+);
+
+listings = listings.map((l) => ({
+  ...l,
+  isSaved: savedSet.has(`${l._id.toString()}-${l.type.toUpperCase()}`),
+}));
+    }
+    console.log(listings.map((l) => ({ id: l._id, isSaved: l.isSaved })));
+    
 
     const totalItems = listings.length;
     const totalPages = Math.ceil(totalItems / limit);
@@ -215,6 +223,7 @@ export const fetchListing = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
@@ -504,33 +513,53 @@ export const countApprovedListings = async (req, res) => {
 export const SaveListing = async (req, res) => {
   const { listingId, userId, listingType } = req.body;
 
+  // Validation
   if (!listingId || !userId || !listingType) {
-    return res.status(400).json({ message: "Missing Required fields" });
+    return res.status(400).json({ message: "Missing required fields" });
   }
 
   if (
     !mongoose.Types.ObjectId.isValid(listingId) ||
     !mongoose.Types.ObjectId.isValid(userId)
   ) {
-    return res.status(404).json({ message: "Sent fields not working" });
+    return res.status(400).json({ message: "Invalid ID format" });
   }
 
   try {
     const user = await User.findById(userId);
-    const alreadySaved = user.saved.some(
-      (item) =>
-        item.listingId.equals(listingId) && item.listingType === listingType
-    );
-    if (alreadySaved) return user;
 
-    user.saved.push({ listingId, listingType });
+    // Check if listing is already saved
+    const index = user.saved.findIndex(
+      (item) =>
+        item.listingId.equals(listingId) &&
+        item.listingType.toUpperCase() === listingType.toUpperCase()
+    );
+
+    let message = "";
+    let isSaved = false;
+
+    if (index > -1) {
+      // Already saved → remove it
+      user.saved.splice(index, 1);
+      message = "Listing removed from saved listings";
+      isSaved = false;
+    } else {
+      // Not saved → add it
+      user.saved.push({ listingId, listingType });
+      message = "Listing added to saved listings";
+      isSaved = true;
+    }
+
     await user.save();
 
-    return res
-      .status(200)
-      .json({ message: "Listing added to Saved listings", user });
+    return res.status(200).json({
+      message,
+      isSaved, // ✅ here is your boolean
+      saved: user.saved, // optional to return
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
   }
 };
+

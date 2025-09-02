@@ -1,4 +1,6 @@
 import { User } from "../models/user.model.js";
+import { Vehicle } from "../models/vehicle.model.js";
+import { Property } from "../models/property.model.js";
 import mongoose from "mongoose";
 
 export const getUserStats = async (req, res) => {
@@ -82,12 +84,38 @@ export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select(
-      "firstName lastName email phoneNumber userType photo verified createdAt address"
+      "firstName lastName email phoneNumber userType photo verified createdAt address saved"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json(user);
+    // Manually populate the saved listings
+    const listings = [];
+    for (const save of user.saved) {
+      let Model;
+      if (save.listingType === "Vehicle") {
+        Model = Vehicle;
+      } else if (save.listingType === "Property") {
+        Model = Property;
+      } else {
+        continue; // Skip invalid types
+      }
+
+      const listing = await Model.findById(save.listingId)
+        .populate('broker_id', 'firstName lastName') // Optionally populate broker details if broker_id is a ref to User
+        .exec();
+
+      if (listing) {
+        listings.push(listing);
+      }
+    }
+    
+
+    // Return the user profile with populated listings
+    res.status(200).json({
+      ...user.toObject(), // Spread the user fields
+      listings // Add the populated listings array
+    });
   } catch (err) {
     console.error("Error in /me route:", err);
     res.status(500).json({ message: "Server error" });
