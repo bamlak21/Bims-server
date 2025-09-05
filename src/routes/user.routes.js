@@ -8,6 +8,7 @@ import {
   fetchAllUsers,
   GetBrokers,
   GetBrokerById,
+  GetBrokerAnalytics,
 } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 const router = Router();
@@ -342,6 +343,65 @@ router.patch("/deactivate/:id", deactivateUser);
  */
 
 router.get("/brokers", GetBrokers);
-router.get("/brokers/:id",GetBrokerById);
-export default router;
 
+/**
+ * @swagger
+ * /api/listing/broker/analytics:
+ *   get:
+ *     summary: Get analytics for broker using their id.
+ *     description: Returns the total number of vehicles, properties, deals, commissions that the broker has.
+ *     tags:
+ *       - Brokers
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ObjectId of the broker
+ *     responses:
+ *       200:
+ *         description: Total number of vehicles, properties, deals, commissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 totalCommissions:
+ *                   type: integer
+ *                   example: 11
+ *                 totalDeals:
+ *                   type: integer
+ *                   example: 10
+ *                 totalListing:
+ *                   type: integer
+ *                   example: 22
+ *       400:
+ *         description: Missing required query parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Required Fields missing
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+
+router.get("/broker/analytics", GetBrokerAnalytics);
+
+router.get("/brokers/:id", GetBrokerById);
+export default router;
