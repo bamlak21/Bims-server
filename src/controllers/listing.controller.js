@@ -192,23 +192,6 @@ export const fetchListing = async (req, res) => {
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
 
-    // ✅ Mark saved listings
-    if (userId) {
-      const user = await User.findById(userId).lean();
-      const savedSet = new Set(
-  user.saved.map(
-    (s) => `${s.listingId.toString()}-${s.listingType.toUpperCase()}`
-  )
-);
-
-listings = listings.map((l) => ({
-  ...l,
-  isSaved: savedSet.has(`${l._id.toString()}-${l.type.toUpperCase()}`),
-}));
-    }
-    console.log(listings.map((l) => ({ id: l._id, isSaved: l.isSaved })));
-    
-
     const totalItems = listings.length;
     const totalPages = Math.ceil(totalItems / limit);
     listings = listings.slice(skip, skip + Number(limit));
@@ -314,7 +297,7 @@ export const fetchListingById = async (req, res) => {
 };
 
 export const SetListingToBroker = async (req, res) => {
-  const { listingId, broker_id, type, owner_id } = req.query;
+  const { listingId, broker_id, type} = req.query;
   const { is_broker_assigned } = req.body;
 
   if (!listingId || !broker_id || !type) {
@@ -325,6 +308,7 @@ export const SetListingToBroker = async (req, res) => {
   try {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
     const listing = await model.findById(listingId);
+    
 
     if (!listing) {
       return res.status(404).json({ message: "Listing not found" });
@@ -342,13 +326,17 @@ export const SetListingToBroker = async (req, res) => {
 
     await CreateNotification({
       userId: listing.owner_id,
-      type: "assignment",
-      listing_id: listing._id,
-      listing_type: listing.type,
-      message: "Broker Assigned to Your Listing",
+      type: "request",
+      listingId: listing._id,
+      listingType: listing.type,
+      brokerId:broker_id, // add broker reference
+      message: "A broker requested to be assigned to your listing.",
+      link: `/broker-profile/${broker_id}`, // frontend redirect
+      action_required: true,
+      status: "pending",
     });
     return res.status(200).json({
-      message: "Broker assigned and deal created successfully",
+      message: "Assignment request sent to the owner",
       listing,
     });
   } catch (error) {

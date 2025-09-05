@@ -3,6 +3,7 @@ import {
   GetNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  RespondToBrokerRequest,
 } from "../controllers/notification.controller.js";
 import { AuthMiddleWare } from "../middleware/auth.middleware.js";
 
@@ -181,5 +182,6 @@ router.patch("/:id/read", AuthMiddleWare, markNotificationAsRead);
  *                   type: string
  */
 router.patch("/read-all", AuthMiddleWare, markAllNotificationsAsRead);
+router.post("/respond-to-broker-request",RespondToBrokerRequest)
 
 export default router;

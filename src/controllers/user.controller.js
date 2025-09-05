@@ -114,7 +114,8 @@ export const getCurrentUserProfile = async (req, res) => {
     // Return the user profile with populated listings
     res.status(200).json({
       ...user.toObject(), // Spread the user fields
-      listings // Add the populated listings array
+      listings,
+      user // Add the populated listings array
     });
   } catch (err) {
     console.error("Error in /me route:", err);
@@ -203,7 +204,7 @@ export const deactivateUser = async (req, res) => {
 export const GetBrokers = async (req, res) => {
   try {
     const brokers = await User.find({ userType: "broker" })
-      .select("firstName lastName email phoneNumber socialLinks photo verified")
+      .select("firstName lastName email phoneNumber socialLinks photo verified userType")
       .lean();
 
     return res.status(200).json({ message: "Success", brokers });
@@ -232,4 +233,4 @@ export const GetBrokerById = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Server Error" });
   }
-};
+}

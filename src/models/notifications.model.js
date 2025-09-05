@@ -11,6 +11,8 @@ const NotificationSchema = new Schema(
       type: String,
       enum: [
         "request",
+        "approved_assigning",
+        "declined_assigning",
         "approved",
         "verification",
         "assignment",
@@ -29,6 +31,16 @@ const NotificationSchema = new Schema(
     message: { type: String, required: true },
     is_read: { type: Boolean, default: false },
     link: { type: String, default: "" },
+    broker_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    action_required: { type: Boolean, default: false },
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "declined"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { CreateReport, GetReports } from "../controllers/report.controller.js";
+import { CreateReport, GetReports, UpdateReport } from "../controllers/report.controller.js";
 
 const router = Router();
 
@@ -132,5 +132,6 @@ router.post("/create", CreateReport);
  */
 
 router.get("/fetch-reports", GetReports);
+router.put("/update/:id",UpdateReport);
 
 export default router;
