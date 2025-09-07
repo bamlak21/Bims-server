@@ -2,6 +2,7 @@ import { Notifications } from "../models/notifications.model.js";
 import { CreateNotification } from "../services/notificationService.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { Property } from "../models/property.model.js";
+import { Deal } from "../models/deals.model.js";
 import mongoose from "mongoose";
 
 export const GetNotifications = async (req, res) => {
@@ -16,7 +17,7 @@ export const GetNotifications = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit))
-      .populate("broker_id","firstName lastName");
+      .populate("broker_id","firstName lastName")
 
     const total = await Notifications.countDocuments(query);
     return res.status(200).json({
@@ -114,6 +115,39 @@ export const RespondToBrokerRequest = async (req, res) => {
     listingType: notification.listing_type,
     message: "Your broker request approved!",
   });
+
+  const type = notification.listing_type;
+
+const existingDeal = await Deal.findOne({
+  listing_id: listing._id,
+  broker_id: notification.broker_id,
+  listing_type: type,
+});
+
+
+    if (!existingDeal) {
+      await Deal.create({
+  listing_id: listing._id,
+  broker_id: notification.broker_id,
+  owner_id: listing.owner_id,
+  title: listing.title,
+  listing_type: type,
+  status: 'negotiating',
+  listing_snapshot: {
+    title: listing.title,
+    description: listing.description,
+    price: listing.price,
+    location: listing.location,
+    images: listing.image_paths || listing.images || [],
+  },
+});
+
+    }
+
+    return res.status(200).json({
+      message: 'Broker assigned and deal created successfully',
+      listing,
+    });
 }
  else {
   const model =
@@ -134,11 +168,12 @@ export const RespondToBrokerRequest = async (req, res) => {
         listingType: notification.listing_type,
         message: "Your broker request declined.",
       });
-    }
-
-    return res.status(200).json({
+      return res.status(200).json({
       message: `Broker request ${response}`,
     });
+    }
+
+    
   } catch (error) {
     console.error("Error in RespondToBrokerRequest:", error);
     return res.status(500).json({ message: "Internal Server Error" });

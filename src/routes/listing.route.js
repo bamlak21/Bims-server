@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  AssignClientToDeal,
   countApprovedListings,
   CreateListing,
   fetchListing,
@@ -712,5 +713,6 @@ router.patch("/save-listing", SaveListing);
 
 router.get("/fetchassignedlisting", getAssignedListings);
 router.get("/count-approved", countApprovedListings);
+router.patch("/assign-client",AssignClientToDeal)
 
 export default router;

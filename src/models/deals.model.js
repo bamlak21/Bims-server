@@ -15,7 +15,7 @@ const DealSchema = new mongoose.Schema(
     listing_id: { type: mongoose.Schema.Types.ObjectId, required: true },
     listing_type: {
       type: String,
-      enum: ["property", "vehicle"],
+      enum: ["Property", "Vehicle"],
       required: true,
     },
     status: {

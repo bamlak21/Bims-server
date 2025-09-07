@@ -3,6 +3,7 @@ import { Vehicle } from "../models/vehicle.model.js";
 import { Deal } from "../models/deals.model.js";
 import { CreateNotification } from "../services/notificationService.js";
 import { User } from "../models/user.model.js";
+import Message from "../models/message.model.js";
 import mongoose from "mongoose";
 
 export const CreateListing = async (req, res) => {
@@ -355,8 +356,8 @@ export const MyListings = async (req, res) => {
   }
 
   try {
-    const vehicles = await Vehicle.find({ owner_id: id }).lean();
-    const properties = await Property.find({ owner_id: id }).lean();
+    const vehicles = await Vehicle.find({ owner_id: id }).lean().populate("broker_id","firstName lastName");
+    const properties = await Property.find({ owner_id: id }).lean().populate("broker_id","firstName lastName");
 
     if (vehicles.length === 0 && properties.length === 0) {
       return res.status(404).json({ message: "No listings found" });
@@ -427,10 +428,26 @@ export const AssignClientToDeal = async (req, res) => {
     await deal.save();
 
     // Optional: create first message
-    await Message.create({
-      deal_id: deal._id,
-      sender: client_id,
-      content: "Hi, I’m interested in this listing",
+    // await Message.create({
+    //   deal_id: deal._id,
+    //   sender: client_id,
+    //   content: "Hi, I’m interested in this listing",
+    // });
+
+    await CreateNotification({
+      userId: deal.broker_id,
+      type: "client_assigned",
+      listingId: listingId,
+      listingType: deal.listing_type,
+      message: "A client contacted you about this deal.",
+    });
+
+    await CreateNotification({
+      userId: deal.owner_id,
+      type: "client_assigned",
+      listingId: listingId,
+      listingType: deal.listing_type,
+      message: "A client is now in contact about your listing.",
     });
 
     return res.status(200).json({

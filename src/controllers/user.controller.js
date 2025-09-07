@@ -2,8 +2,6 @@ import { User } from "../models/user.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { Property } from "../models/property.model.js";
 import mongoose from "mongoose";
-import { Vehicle } from "../models/vehicle.model.js";
-import { Property } from "../models/property.model.js";
 import { Deal } from "../models/deals.model.js";
 import { Commission } from "../models/commision.model.js";
 
