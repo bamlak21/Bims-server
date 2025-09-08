@@ -208,7 +208,6 @@ export const fetchListing = async (req, res) => {
   }
 };
 
-
 export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
 
@@ -298,7 +297,7 @@ export const fetchListingById = async (req, res) => {
 };
 
 export const SetListingToBroker = async (req, res) => {
-  const { listingId, broker_id, type} = req.query;
+  const { listingId, broker_id, type } = req.query;
   const { is_broker_assigned } = req.body;
 
   if (!listingId || !broker_id || !type) {
@@ -309,7 +308,6 @@ export const SetListingToBroker = async (req, res) => {
   try {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
     const listing = await model.findById(listingId);
-    
 
     if (!listing) {
       return res.status(404).json({ message: "Listing not found" });
@@ -330,7 +328,7 @@ export const SetListingToBroker = async (req, res) => {
       type: "request",
       listingId: listing._id,
       listingType: listing.type,
-      brokerId:broker_id, // add broker reference
+      brokerId: broker_id, // add broker reference
       message: "A broker requested to be assigned to your listing.",
       link: `/broker-profile/${broker_id}`, // frontend redirect
       action_required: true,
@@ -356,8 +354,12 @@ export const MyListings = async (req, res) => {
   }
 
   try {
-    const vehicles = await Vehicle.find({ owner_id: id }).lean().populate("broker_id","firstName lastName");
-    const properties = await Property.find({ owner_id: id }).lean().populate("broker_id","firstName lastName");
+    const vehicles = await Vehicle.find({ owner_id: id })
+      .lean()
+      .populate("broker_id", "firstName lastName");
+    const properties = await Property.find({ owner_id: id })
+      .lean()
+      .populate("broker_id", "firstName lastName");
 
     if (vehicles.length === 0 && properties.length === 0) {
       return res.status(404).json({ message: "No listings found" });
@@ -567,4 +569,3 @@ export const SaveListing = async (req, res) => {
     return res.status(500).json({ message: "Server Error" });
   }
 };
-

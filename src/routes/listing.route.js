@@ -711,8 +711,63 @@ router.get("/my-listings/:id", MyListings);
 
 router.patch("/save-listing", SaveListing);
 
+/**
+ * @swagger
+ * /api/listing/assigned:
+ *   get:
+ *     summary: Get assigned listings for a broker
+ *     description: Fetch all assigned listings (vehicles or properties) for a specific broker.
+ *     tags:
+ *       - Listings
+ *     parameters:
+ *       - in: query
+ *         name: brokerId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The ID of the broker.
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [vehicle, property]
+ *         required: true
+ *         description: The type of listing (vehicle or property).
+ *     responses:
+ *       200:
+ *         description: A list of assigned listings for the broker.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 oneOf:
+ *                   - $ref: '#/components/schemas/Vehicle'
+ *                   - $ref: '#/components/schemas/Property'
+ *       400:
+ *         description: Missing brokerId or type in query parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Missing brokerId or type
+ *       500:
+ *         description: Server error while fetching assigned listings.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
+
 router.get("/fetchassignedlisting", getAssignedListings);
 router.get("/count-approved", countApprovedListings);
-router.patch("/assign-client",AssignClientToDeal)
+router.patch("/assign-client", AssignClientToDeal);
 
 export default router;
