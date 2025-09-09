@@ -15,6 +15,8 @@ export const getDealsByBroker = async (req, res) => {
 
     const deals = await Deal.find(query)
       .populate("listing_id")
+      .populate("owner_id","firstName lastName")
+      .populate("client_id","firstName lastName")
       .sort({ createdAt: -1 });
 
     res.json(deals);

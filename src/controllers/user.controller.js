@@ -241,6 +241,10 @@ export const GetBrokerById = async (req, res) => {
 
 export const GetBrokerAnalytics = async (req, res) => {
   const { brokerId } = req.query;
+  if (!mongoose.Types.ObjectId.isValid(brokerId)) {
+  return res.status(400).json({ error: 'Invalid broker_id' });
+}
+
 
   try {
     const vehicles = await Vehicle.countDocuments({ broker_id: brokerId });

@@ -770,4 +770,5 @@ router.get("/fetchassignedlisting", getAssignedListings);
 router.get("/count-approved", countApprovedListings);
 router.patch("/assign-client", AssignClientToDeal);
 
+
 export default router;
