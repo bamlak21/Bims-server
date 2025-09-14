@@ -36,6 +36,10 @@ const NotificationSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    client_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     action_required: { type: Boolean, default: false },
     status: {
       type: String,

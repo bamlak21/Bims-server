@@ -6,8 +6,7 @@ import { sendOtp } from "../utils/OTP.js";
 import { CreateNotification } from "../services/notificationService.js";
 
 export const Register = async (req, res) => {
-  const { firstName, lastName, email, userType, phoneNumber, password } =
-    req.body;
+  const { firstName, lastName, email, userType, phoneNumber, password } = req.body;
 
   if (
     !firstName ||
@@ -23,12 +22,20 @@ export const Register = async (req, res) => {
   try {
     const userWithPhoneNumber = await User.findOne({ phoneNumber });
     if (userWithPhoneNumber) {
+      // Check if banned
+      if (userWithPhoneNumber.isBanned) {
+        return res.status(403).json({ message: "This phone number is banned and cannot register." });
+      }
       res.status(405).json({ message: "Phone number already in use" });
       return;
     }
 
     const userWithEmail = await User.findOne({ email });
     if (userWithEmail) {
+      // Check if banned
+      if (userWithEmail.isBanned) {
+        return res.status(403).json({ message: "This email is banned and cannot register." });
+      }
       res.status(405).json({ message: "Email already in use" });
       return;
     }
@@ -116,6 +123,9 @@ export const Login = async (req, res) => {
       return res
         .status(404)
         .json({ message: "Account is deactivated. contact support" });
+    }
+    if (user.isBanned) {
+      return res.status(404).json({ message: `Account is banned. Reason: ${user.banReason})`, data: { isBanned: true } });
     }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -368,3 +378,35 @@ export const verifyOtp = async (req, res) => {
     return res.status(500).json({ message: "Server Error" });
   }
 };
+
+
+export const banUser = async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  try {
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // user.isActive = false;
+    user.isBanned = true;
+    user.banReason = reason || "Violation of terms";
+    user.bannedAt = new Date();
+
+    await user.save();
+
+    res.status(200).json({
+      message: "User has been banned successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error banning user:", error);
+    res.status(500).json({
+      message: "Server error while banning user",
+    });
+  }
+};
+

@@ -10,6 +10,7 @@ import {
   verifyUser,
   verifyOtp,
   forgotPassword,
+  banUser,
   
   //   getCurrentUserProfile,
   //   getVerifiedBrokers,
@@ -279,4 +280,5 @@ router.post("/forgot-password", forgotPassword);
 // router.get("/listings", GetListings)
 // router.get('/user-profile', GetUserProfile);
 router.post("verify-otp",verifyOtp)
+router.patch("/banUser/:id",banUser)
 export default router;
