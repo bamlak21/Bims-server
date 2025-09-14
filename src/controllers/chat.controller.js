@@ -2,25 +2,25 @@ import mongoose from "mongoose";
 import ChatRoom from "../models/chat.model.js";
 
 export const GetChatRooms = async (req, res) => {
-  const { userId } = req.query;
+  const { userId } = req.params;
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ message: "Id missing" });
   }
 
   try {
-    const chat = await ChatRoom.find({ participants: userId });
+    const chatRooms = await ChatRoom.find({ participants: userId });
 
     const roomsWithLastMessage = await Promise.all(
-      chat.map(async (room) => {
-        const lastMessage = await Message.find({ roomId: room._id })
-          .sort({ createdAt: -1 })
-          .limit(1);
+      chatRooms.map(async (room) => {
+        const lastMessage = await Message.findOne({ roomId: room._id }).sort({
+          createdAt: -1,
+        });
 
         return {
           roomId: room._id,
           participants: room.participants,
-          lastMessage: lastMessage[0] || null,
+          lastMessage: lastMessage || null,
         };
       })
     );
