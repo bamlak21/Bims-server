@@ -17,15 +17,25 @@ export const GetNotifications = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit))
-      .populate("broker_id","firstName lastName")
-
+      .populate("client_id","firstName lastName email phoneNumber photo")
+      .populate("broker_id","firstName lastName email phoneNumber photo")
+      .populate({
+    path: 'listing_id',
+    populate: {
+      path: 'owner_id',
+      select: 'firstName lastName photo email phoneNumber'
+    }
+  })
+      
     const total = await Notifications.countDocuments(query);
     return res.status(200).json({
       page: Number(page),
       limit: Number(limit),
       total,
       notifications,
+      
     });
+    
   } catch (err) {
     console.log(err.message);
 

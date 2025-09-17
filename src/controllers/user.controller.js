@@ -16,6 +16,7 @@ export const getUserStats = async (req, res) => {
       verifiedBrokers: 0,
       totalClients: 0,
       totalOwners: 0,
+      totalBrokers: 0,
     };
 
     users.forEach((user) => {
@@ -28,6 +29,7 @@ export const getUserStats = async (req, res) => {
           } else {
             stats.pendingBrokers++;
           }
+          stats.totalBrokers++;
           break;
         case "client":
           stats.totalClients++;
@@ -86,7 +88,7 @@ export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select(
-      "firstName lastName email phoneNumber userType photo verified createdAt address saved"
+      "firstName lastName email phoneNumber userType photo verified createdAt address saved isBanned"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });

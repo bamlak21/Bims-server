@@ -442,6 +442,7 @@ export const AssignClientToDeal = async (req, res) => {
       listingId: listingId,
       listingType: deal.listing_type,
       message: "A client contacted you about this deal.",
+      clientId:client_id
     });
 
     await CreateNotification({
@@ -450,6 +451,7 @@ export const AssignClientToDeal = async (req, res) => {
       listingId: listingId,
       listingType: deal.listing_type,
       message: "A client is now in contact about your listing.",
+      clientId:client_id
     });
 
     return res.status(200).json({
