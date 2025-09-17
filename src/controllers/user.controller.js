@@ -104,20 +104,19 @@ export const getCurrentUserProfile = async (req, res) => {
       }
 
       const listing = await Model.findById(save.listingId)
-        .populate('broker_id', 'firstName lastName') // Optionally populate broker details if broker_id is a ref to User
+        .populate("broker_id", "firstName lastName") // Optionally populate broker details if broker_id is a ref to User
         .exec();
 
       if (listing) {
         listings.push(listing);
       }
     }
-    
 
     // Return the user profile with populated listings
     res.status(200).json({
       ...user.toObject(), // Spread the user fields
       listings,
-      user // Add the populated listings array
+      user, // Add the populated listings array
     });
   } catch (err) {
     console.error("Error in /me route:", err);
@@ -208,7 +207,9 @@ export const deactivateUser = async (req, res) => {
 export const GetBrokers = async (req, res) => {
   try {
     const brokers = await User.find({ userType: "broker" })
-      .select("firstName lastName email phoneNumber socialLinks photo verified userType")
+      .select(
+        "firstName lastName email phoneNumber socialLinks photo verified userType"
+      )
       .lean();
 
     return res.status(200).json({ message: "Success", brokers });
@@ -241,10 +242,14 @@ export const GetBrokerById = async (req, res) => {
 
 export const GetBrokerAnalytics = async (req, res) => {
   const { brokerId } = req.query;
-  if (!mongoose.Types.ObjectId.isValid(brokerId)) {
-  return res.status(400).json({ error: 'Invalid broker_id' });
-}
 
+  if (!brokerId) {
+    return res.status(400).json({ message: "Missing Required fields." });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(brokerId)) {
+    return res.status(400).json({ error: "Invalid broker_id" });
+  }
 
   try {
     const vehicles = await Vehicle.countDocuments({ broker_id: brokerId });
@@ -255,15 +260,104 @@ export const GetBrokerAnalytics = async (req, res) => {
       broker_id: brokerId,
       status: "completed",
     });
-    const totalCommissions = await Commission.countDocuments({
-      broker_id: brokerId,
-    });
+    // Success Rate
+    const successRate =
+      totalListing > 0 ? (totalDeals / totalListing) * 100 : 0;
+    const totalCommissionEarnings = await Commission.aggregate([
+      {
+        $group: {
+          _id: "$broker_id",
+          totalCommission: { $sum: "$total_commission" },
+          listingSold: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          brokerId: "$_id",
+          totalCommission: 1,
+          itemSold: 1,
+        },
+      },
+    ]);
+    // Monthly deals
+    const monthlyDeals = await Deal.aggregate([
+      {
+        $match: {
+          broker_id: new mongoose.Types.ObjectId(brokerId),
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          deals: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          month: "$_id",
+          deals: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+    const monthlySoldListings = await Deal.aggregate([
+      {
+        $match: {
+          broker_id: new mongoose.Types.ObjectId(brokerId),
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          soldListings: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          month: "$_id",
+          soldListings: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
+
+    // Monthly commissions
+    const monthlyCommissions = await Commission.aggregate([
+      { $match: { broker_id: new mongoose.Types.ObjectId(brokerId) } },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          commission: { $sum: "$total_commission" },
+        },
+      },
+      {
+        $project: {
+          month: "$_id",
+          commission: 1,
+          _id: 0,
+        },
+      },
+      { $sort: { month: 1 } },
+    ]);
 
     return res.status(200).json({
       message: "Success",
-      totalCommissions: totalCommissions,
-      totalDeals: totalDeals,
-      totalListing: totalListing,
+      totals: {
+        totalCommissions: totalCommissionEarnings[0]?.totalCommission || 0,
+        totalDeals,
+        totalListing,
+        successRate: successRate.toFixed(2),
+      },
+      monthly: {
+        deals: monthlyDeals,
+        commissions: monthlyCommissions,
+        listings: monthlySoldListings,
+      },
     });
   } catch (error) {
     console.error(error);

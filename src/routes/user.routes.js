@@ -346,7 +346,7 @@ router.get("/brokers", GetBrokers);
 
 /**
  * @swagger
- * /api/listing/broker/analytics:
+ * /api/user/broker/analytics:
  *   get:
  *     summary: Get analytics for broker using their id.
  *     description: Returns the total number of vehicles, properties, deals, commissions that the broker has.
@@ -354,7 +354,7 @@ router.get("/brokers", GetBrokers);
  *       - Brokers
  *     parameters:
  *       - in: query
- *         name: id
+ *         name: brokerId
  *         schema:
  *           type: string
  *         required: true
