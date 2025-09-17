@@ -20,8 +20,8 @@ const DealSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["negotiating", "agreement", "completed", "cancelled"],
-      default: "negotiating",
+      enum: ["active","negotiating", "agreement", "completed", "cancelled"],
+      default: "active",
     },
     offer: { type: Number, default: 0 },
     title: { type: String, required: true },

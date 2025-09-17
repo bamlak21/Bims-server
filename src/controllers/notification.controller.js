@@ -142,7 +142,7 @@ const existingDeal = await Deal.findOne({
   owner_id: listing.owner_id,
   title: listing.title,
   listing_type: type,
-  status: 'negotiating',
+  status: 'active',
   listing_snapshot: {
     title: listing.title,
     description: listing.description,

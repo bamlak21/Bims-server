@@ -427,6 +427,7 @@ export const AssignClientToDeal = async (req, res) => {
 
     // Assign client
     deal.client_id = client_id;
+    deal.status = "negotiating";
     await deal.save();
 
     // Optional: create first message

@@ -340,6 +340,12 @@ export const GetBrokerAnalytics = async (req, res) => {
 
     return res.status(200).json({
   message: "Success",
+  totals: {
+        totalCommissions: totalCommissionEarnings[0]?.totalCommission || 0,
+        totalDeals,
+        totalListing,
+        successRate: successRate.toFixed(2),
+      },
   analytics: {
     overview: {
       totalEarnings: totalCommissionEarnings[0]?.totalCommission || 0,
@@ -356,11 +362,10 @@ export const GetBrokerAnalytics = async (req, res) => {
       };
     }),
     dealPipeline: {
-      active: await Vehicle.countDocuments({ broker_id: brokerId, status: "active" }) +
-              await Property.countDocuments({ broker_id: brokerId, status: "active" }),
+      active: await Deal.countDocuments({ broker_id: brokerId, status: "active" }),
       negotiating: await Deal.countDocuments({ broker_id: brokerId, status: "negotiating" }),
       agreement: await Deal.countDocuments({ broker_id: brokerId, status: "agreement" }),
-      completed: totalDeals,
+      completed: await Deal.countDocuments({ broker_id: brokerId, status:"completed"}),
       cancelled: await Deal.countDocuments({ broker_id: brokerId, status: "cancelled" })
     },
     commissionHistory: await Commission.find({ broker_id: brokerId })
