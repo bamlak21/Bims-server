@@ -88,7 +88,7 @@ export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).select(
-      "firstName lastName email phoneNumber userType photo verified createdAt address saved isBanned"
+      "firstName lastName email phoneNumber userType photo verified createdAt address saved isBanned isActive"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -339,18 +339,46 @@ export const GetBrokerAnalytics = async (req, res) => {
     ]);
 
     return res.status(200).json({
-      message: "Success",
-      totals: {
-        totalCommissions: totalCommissionEarnings[0]?.totalCommission || 0,
-        totalDeals,
-        totalListing,
-        successRate: successRate.toFixed(2),
-      },
-      monthly: {
-        soldListings: monthlySoldListings,
-        commissions: monthlyCommissions,
-      },
-    });
+  message: "Success",
+  analytics: {
+    overview: {
+      totalEarnings: totalCommissionEarnings[0]?.totalCommission || 0,
+      completedDeals: totalDeals,
+      successRate: Number(successRate.toFixed(2)),
+    },
+    monthlyData: monthNames.slice(1).map((month, index) => {
+      const sold = monthlySoldListings.find(m => m.month === month)?.soldListings || 0;
+      const commission = monthlyCommissions.find(m => m.month === month)?.commission || 0;
+      return {
+        month: month.substring(0, 3), // e.g. "Jan"
+        listings: sold,               // could also return property+vehicle per month if needed
+        earnings: commission
+      };
+    }),
+    dealPipeline: {
+      active: await Vehicle.countDocuments({ broker_id: brokerId, status: "active" }) +
+              await Property.countDocuments({ broker_id: brokerId, status: "active" }),
+      negotiating: await Deal.countDocuments({ broker_id: brokerId, status: "negotiating" }),
+      agreement: await Deal.countDocuments({ broker_id: brokerId, status: "agreement" }),
+      completed: totalDeals,
+      cancelled: await Deal.countDocuments({ broker_id: brokerId, status: "cancelled" })
+    },
+    commissionHistory: await Commission.find({ broker_id: brokerId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean()
+      .then(cs => cs.map(c => ({
+        id: c._id,
+        listing_id: c.listing_id,
+        amount: c.total_commission,
+        status: c.status,
+        client_payment_status: c.client_payment_status,
+        owner_payment_status: c.owner_payment_status,
+        created_at: c.createdAt
+      })))
+  }
+});
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server Error" });
