@@ -244,6 +244,21 @@ export const GetBrokerById = async (req, res) => {
 
 export const GetBrokerAnalytics = async (req, res) => {
   const { brokerId } = req.query;
+  const monthNames = [
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   if (!brokerId) {
     return res.status(400).json({ message: "Missing Required fields." });
@@ -254,57 +269,33 @@ export const GetBrokerAnalytics = async (req, res) => {
   }
 
   try {
+    // Total listings
     const vehicles = await Vehicle.countDocuments({ broker_id: brokerId });
     const property = await Property.countDocuments({ broker_id: brokerId });
-
     const totalListing = vehicles + property;
+
+    // Total deals
     const totalDeals = await Deal.countDocuments({
       broker_id: brokerId,
       status: "completed",
     });
+
     // Success Rate
     const successRate =
       totalListing > 0 ? (totalDeals / totalListing) * 100 : 0;
+
+    // Total commission
     const totalCommissionEarnings = await Commission.aggregate([
+      { $match: { broker_id: new mongoose.Types.ObjectId(brokerId) } },
       {
         $group: {
-          _id: "$broker_id",
+          _id: null,
           totalCommission: { $sum: "$total_commission" },
-          listingSold: { $sum: 1 },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          brokerId: "$_id",
-          totalCommission: 1,
-          itemSold: 1,
         },
       },
     ]);
-    // Monthly deals
-    const monthlyDeals = await Deal.aggregate([
-      {
-        $match: {
-          broker_id: new mongoose.Types.ObjectId(brokerId),
-          status: "completed",
-        },
-      },
-      {
-        $group: {
-          _id: { $month: "$createdAt" },
-          deals: { $sum: 1 },
-        },
-      },
-      {
-        $project: {
-          month: "$_id",
-          deals: 1,
-          _id: 0,
-        },
-      },
-      { $sort: { month: 1 } },
-    ]);
+
+    // Monthly sold listings (deals)
     const monthlySoldListings = await Deal.aggregate([
       {
         $match: {
@@ -320,12 +311,12 @@ export const GetBrokerAnalytics = async (req, res) => {
       },
       {
         $project: {
-          month: "$_id",
+          month: { $arrayElemAt: [monthNames, "$_id"] },
           soldListings: 1,
           _id: 0,
         },
       },
-      { $sort: { month: 1 } },
+      { $sort: { _id: 1 } },
     ]);
 
     // Monthly commissions
@@ -339,12 +330,12 @@ export const GetBrokerAnalytics = async (req, res) => {
       },
       {
         $project: {
-          month: "$_id",
+          month: { $arrayElemAt: [monthNames, "$_id"] },
           commission: 1,
           _id: 0,
         },
       },
-      { $sort: { month: 1 } },
+      { $sort: { _id: 1 } },
     ]);
 
     return res.status(200).json({
@@ -356,9 +347,8 @@ export const GetBrokerAnalytics = async (req, res) => {
         successRate: successRate.toFixed(2),
       },
       monthly: {
-        deals: monthlyDeals,
+        soldListings: monthlySoldListings,
         commissions: monthlyCommissions,
-        listings: monthlySoldListings,
       },
     });
   } catch (error) {
