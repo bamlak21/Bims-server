@@ -35,6 +35,7 @@ const DealSchema = new mongoose.Schema(
       images: [String],
     },
     broker_notes: { type: String, default: "" },
+    commission_id: { type: mongoose.Schema.Types.ObjectId, ref: "Commission" },
   },
   { timestamps: true }
 );
