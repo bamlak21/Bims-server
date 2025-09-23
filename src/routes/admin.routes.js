@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RejectListing } from "../controllers/admin.controller.js";
+import { getBrokerPerformance, getInsights, getOverview, getReports, RejectListing } from "../controllers/admin.controller.js";
 import { GetCommissions } from "../controllers/commission.controller.js";
 
 const router = Router();
@@ -58,5 +58,9 @@ const router = Router();
  */
 
 router.patch("/reject-listing", RejectListing);
+router.get("/overview", getOverview);
+router.get("/insights", getInsights);
+router.get("/reports", getReports);
+router.get("/broker-performance", getBrokerPerformance);
 
 export default router;

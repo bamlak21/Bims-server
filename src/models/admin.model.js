@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import mongoose ,{ Schema} from "mongoose";
 
 const AdminSchema = new Schema({
   name: String,
@@ -6,4 +6,4 @@ const AdminSchema = new Schema({
   password: { type: String, required: true },
 });
 
-export const Admin =  model.Admin || model("Admin", AdminSchema) ;
+export const Admin = mongoose.model("Admin", AdminSchema) ;

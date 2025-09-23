@@ -1,6 +1,7 @@
 import { User } from "../models/user.model.js";
 import { Admin } from "../models/admin.model.js";
 import { createToken } from "../utils/jwtUtils.js";
+import { createAdminToken } from "../utils/jwtUtils.js";
 import bcrypt from "bcrypt";
 import { sendOtp } from "../utils/OTP.js";
 import { CreateNotification } from "../services/notificationService.js";
@@ -169,11 +170,12 @@ export const AdminLogin = async (req, res) => {
       return res.status(403).json({ message: "Invalid Credentials" });
     }
 
-    const token = createToken(admin);
+    const token = createAdminToken(admin);
 
     return res.status(200).json({
       message: "admin logged in",
       email: admin.email,
+      name:admin.name,
       token: token,
     });
   } catch (error) {
