@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getBrokerPerformance, getInsights, getOverview, getReports, RejectListing } from "../controllers/admin.controller.js";
+import { getBrokerPerformance, getInsights, getOverview, getReports, getUserGrowth, RejectListing } from "../controllers/admin.controller.js";
 import { GetCommissions } from "../controllers/commission.controller.js";
 
 const router = Router();
@@ -62,5 +62,6 @@ router.get("/overview", getOverview);
 router.get("/insights", getInsights);
 router.get("/reports", getReports);
 router.get("/broker-performance", getBrokerPerformance);
+router.get("/user-growth",getUserGrowth);
 
 export default router;

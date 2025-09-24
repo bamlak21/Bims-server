@@ -133,3 +133,78 @@ export const getBrokerPerformance = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const getUserGrowth = async (req, res) => {
+  try {
+    const period = parseInt(req.query.period) || 365; // Default to 1 year if no period
+    const startDate = new Date(Date.now() - period * 24 * 60 * 60 * 1000);
+    
+    // For periods < 30 days, use daily grouping; otherwise monthly
+    const isDaily = period < 30;
+    const groupBy = isDaily ? { day: { $dayOfMonth: "$createdAt" }, month: { $month: "$createdAt" }, year: { $year: "$createdAt" } } : { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } };
+
+    const userGrowth = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate },
+          userType: { $in: ['client', 'broker','owner'] } // Exclude admins
+        }
+      },
+      {
+        $group: {
+          _id: groupBy,
+          brokers: {
+            $sum: { $cond: [{ $eq: ["$userType", "broker"] }, 1, 0] }
+          },
+          clients: {
+            $sum: { $cond: [{ $eq: ["$userType", "client"] }, 1, 0] }
+          },
+          owners: {
+            $sum: { $cond: [{ $eq: ["$userType", "owner"] }, 1, 0] } 
+          },
+          totalUsers: { $sum: 1 }
+        }
+      },
+      {
+        $sort: isDaily ? { "_id.year": 1, "_id.month": 1, "_id.day": 1 } : { "_id.year": 1, "_id.month": 1 }
+      },
+      {
+        $project: {
+          _id: 0,
+          month: isDaily 
+            ? { $concat: [
+                { $toString: "$_id.day" }, "/", { $toString: "$_id.month" }, "/", { $toString: "$_id.year" }
+              ] }
+            : { $concat: [
+                { $toString: "$_id.month" }, "/", { $toString: "$_id.year" }
+              ] },
+          totalUsers: 1,
+          brokers: 1,
+          clients: 1,
+          owners: 1
+        }
+      },
+      {
+        $limit: 12  // Limit results for performance
+      }
+    ]);
+
+    // Calculate platformGrowth as percentage increase from first to last period (if >1 data points)
+    let platformGrowth = 0;
+    if (userGrowth.length > 1) {
+      const firstTotal = userGrowth[0].totalUsers;
+      const lastTotal = userGrowth[userGrowth.length - 1].totalUsers;
+      platformGrowth = ((lastTotal - firstTotal) / firstTotal * 100).toFixed(1);
+    } else if (userGrowth.length === 1) {
+      platformGrowth = userGrowth[0].totalUsers; // For single period, show absolute new users
+    }
+
+    res.json({
+      userGrowth,
+      platformGrowth: parseFloat(platformGrowth) // Send growth for frontend use
+    });
+  } catch (err) {
+    console.error('Error fetching user growth:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
