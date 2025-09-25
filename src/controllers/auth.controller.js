@@ -283,8 +283,11 @@ export const verifyUser = async (req, res) => {
     }
     await CreateNotification({
       userId: updatedUser._id,
-      type: "approved",
-      message: "Your account verified successfully.",
+      type: "approved_account",
+      message: verified
+    ? "Your account verified successfully."
+    : "Your account verification has been rejected.",
+      status:verified?"accepted":"declined"
     });
 
     return res.status(200).json(updatedUser);

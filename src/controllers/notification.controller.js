@@ -104,7 +104,7 @@ export const RespondToBrokerRequest = async (req, res) => {
     notification.action_required = false;
     await notification.save();
 
-    if (response === "accepted") {
+    if (response === "approved") {
   const model =
     notification.listing_type === "Vehicle" ? Vehicle : Property;
 
@@ -124,6 +124,7 @@ export const RespondToBrokerRequest = async (req, res) => {
     listingId: listing._id,
     listingType: notification.listing_type,
     message: "Your broker request approved!",
+    status:"accepted"
   });
 
   const type = notification.listing_type;
@@ -177,6 +178,7 @@ const existingDeal = await Deal.findOne({
         listingId: notification.listing_id,
         listingType: notification.listing_type,
         message: "Your broker request declined.",
+        status:"declined"
       });
       return res.status(200).json({
       message: `Broker request ${response}`,

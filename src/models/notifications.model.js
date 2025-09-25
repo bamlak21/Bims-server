@@ -15,6 +15,7 @@ const NotificationSchema = new Schema(
         "declined_assigning",
         "client_assigned",
         "approved",
+        "approved_account",
         "verification",
         "assignment",
         "status_update",
