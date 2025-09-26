@@ -208,3 +208,107 @@ export const getUserGrowth = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const getListingGrowth = async (req, res) => {
+  try {
+    const period = parseInt(req.query.period) || 365; // default to 1 year
+    const startDate = new Date(Date.now() - period * 24 * 60 * 60 * 1000);
+    const isDaily = period < 30;
+
+    const groupBy = isDaily
+      ? {
+          day: { $dayOfMonth: "$createdAt" },
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        }
+      : {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        };
+
+    // Aggregate pipeline to be reused for both models
+    const getGrowthPipeline = (Model, typeLabel) => [
+      {
+        $match: {
+          createdAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: groupBy,
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          group: "$_id",
+          count: 1,
+          type: { $literal: typeLabel },
+        },
+      },
+    ];
+
+    // Run both aggregations in parallel
+    const [vehicleData, propertyData] = await Promise.all([
+      Vehicle.aggregate(getGrowthPipeline(Vehicle, "vehicle")),
+      Property.aggregate(getGrowthPipeline(Property, "property")),
+    ]);
+
+    // Merge and group data from both models into a common timeline
+    const mergedData = [...vehicleData, ...propertyData];
+
+    // Create a time-based key for grouping
+    const grouped = {};
+
+    for (const item of mergedData) {
+      const { group, count, type } = item;
+      const key = isDaily
+        ? `${group.day}/${group.month}/${group.year}`
+        : `${group.month}/${group.year}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          period: key,
+          totalListings: 0,
+          vehicleListings: 0,
+          propertyListings: 0,
+        };
+      }
+
+      grouped[key].totalListings += count;
+      if (type === "vehicle") grouped[key].vehicleListings += count;
+      if (type === "property") grouped[key].propertyListings += count;
+    }
+
+    // Convert to array and sort
+    const listingGrowth = Object.values(grouped).sort((a, b) => {
+      const [am, ay] = a.period.split("/").map(Number);
+      const [bm, by] = b.period.split("/").map(Number);
+      return ay !== by ? ay - by : am - bm;
+    }).slice(-12); // limit to last 12 entries
+
+    // Calculate growth
+    let listingGrowthRate = 0;
+    if (listingGrowth.length > 1) {
+      const first = listingGrowth[0].totalListings;
+      const last = listingGrowth[listingGrowth.length - 1].totalListings;
+
+      if (first === 0) {
+        listingGrowthRate = last > 0 ? 100 : 0;
+      } else {
+        listingGrowthRate = ((last - first) / first * 100).toFixed(1);
+      }
+    } else if (listingGrowth.length === 1) {
+      listingGrowthRate = listingGrowth[0].totalListings;
+    }
+
+    res.json({
+      listingGrowth,
+      listingGrowthRate: parseFloat(listingGrowthRate),
+    });
+  } catch (err) {
+    console.error("Error fetching listing growth:", err);
+    res.status(500).json({ message: err.message });
+  }
+};

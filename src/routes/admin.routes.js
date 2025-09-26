@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getBrokerPerformance, getInsights, getOverview, getReports, getUserGrowth, RejectListing } from "../controllers/admin.controller.js";
+import { getBrokerPerformance, getInsights, getListingGrowth, getOverview, getReports, getUserGrowth, RejectListing } from "../controllers/admin.controller.js";
 import { GetCommissions } from "../controllers/commission.controller.js";
 
 const router = Router();
@@ -63,5 +63,6 @@ router.get("/insights", getInsights);
 router.get("/reports", getReports);
 router.get("/broker-performance", getBrokerPerformance);
 router.get("/user-growth",getUserGrowth);
+router.get("/listing-growth",getListingGrowth);
 
 export default router;
