@@ -4,6 +4,8 @@ import { Vehicle } from "../models/vehicle.model.js";
 import { CreateNotification } from "../services/notificationService.js";
 import {Commission} from "../models/commision.model.js";
 import {User} from "../models/user.model.js";
+import mongoose from "mongoose";
+import { getMetrics } from "../utils/metric.js";
 
 export const RejectListing = async (req, res) => {
   const { id, type, reason } = req.body;
@@ -312,3 +314,44 @@ export const getListingGrowth = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+let serverStartTime = Date.now()
+export const systemHealth = async (req, res) => {
+ 
+  const getSuccessRate = () => {
+  if (totalRequests === 0) return 100; // Assume perfect if no traffic
+  return ((successfulRequests / totalRequests) * 100).toFixed(2);
+};
+
+  
+  try {
+    // Uptime in seconds
+    const uptime = ((Date.now() - serverStartTime) / 1000).toFixed(0);
+
+    // Basic DB ping for response time
+    const dbStart = Date.now();
+    await mongoose.connection.db.admin().ping();
+    const responseTime = Date.now() - dbStart;
+
+    // Count active users (you can define what "active" means, e.g., logged in past 15 minutes)
+    const activeSince = new Date(Date.now() - 15 * 60 * 1000); // last 15 minutes
+    const activeUsers = await User.countDocuments({
+      isActive: true,
+      loginLast: { $gte: activeSince },
+    });
+   
+     const { successRate, errorRate } = getMetrics();
+    res.json({
+      uptime: Number(uptime),  // in seconds
+      responseTime, // in ms                      
+      activeUsers,
+      successRate,
+      errorRate                     
+    });
+  } catch (err) {
+    console.error("System health check failed:", err);
+    res.status(500).json({ error: 'Failed to fetch system health' });
+  }
+}
+
+

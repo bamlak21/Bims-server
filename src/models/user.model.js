@@ -65,7 +65,9 @@ const UserSchema = new Schema(
     isBanned: { type: Boolean, default: false },
   banReason: { type: String, default: null },
   bannedAt: { type: Date, default: null },
-  },
+  loginLast:{type:Date, deafault:null}  
+},
+  
 
   { timestamps: true }
 );

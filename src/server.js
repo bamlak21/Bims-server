@@ -17,6 +17,7 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import { RegisterSocket } from "./Socket/socket.js";
+import { incrementRequest } from "./utils/metric.js";
 
 dotenv.config({ quiet: true });
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
@@ -39,6 +40,16 @@ app.use(
     credentials: true,
   })
 );
+
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (req.originalUrl !== '/api/admin/system-health') {
+      incrementRequest(res.statusCode);
+    }
+  });
+  next();
+});
+
 
 RegisterSocket(io);
 

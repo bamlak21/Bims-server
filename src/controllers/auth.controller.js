@@ -132,6 +132,8 @@ export const Login = async (req, res) => {
     if (!isMatch) {
       return res.status(403).json({ message: "Invalid Credentials" });
     }
+    user.loginLast= new Date()
+    await user.save();
 
     const token = createToken(user);
     return res.status(200).json({

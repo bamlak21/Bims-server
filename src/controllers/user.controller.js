@@ -74,7 +74,7 @@ export const getAllUsers = async (req, res) => {
 
     const users = await User.find(
       filter,
-      "firstName lastName email phoneNumber userType verified createdAt documentVerification"
+      "firstName lastName email phoneNumber userType verified createdAt documentVerification lastLogin"
     );
 
     return res.status(200).json(users);
