@@ -8,7 +8,7 @@ const UserSchema = new Schema(
     userType: {
       type: String,
       required: true,
-      enum: ["client", "broker", "admin"],
+      enum: ["client", "broker", "owner"],
       default: "client",
     },
     phoneNumber: { type: String, required: true, unique: true },

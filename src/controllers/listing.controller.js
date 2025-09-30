@@ -260,6 +260,7 @@ export const verifyListing = async (req, res) => {
       listing_id: listing._id,
       listing_type: listing.type,
       message: "Your listing have been approved",
+      status:"accepted"
     });
 
     return res.status(200).json({

@@ -37,6 +37,7 @@ export const RejectListing = async (req, res) => {
             listing.status === "rejected"
               ? listing.rejection_reason
               : "Your listing have been approved",
+          status:"declined"
         });
     return res.status(200).json({ message: "Listing rejected" });
   } catch (err) {
@@ -340,13 +341,14 @@ export const systemHealth = async (req, res) => {
       loginLast: { $gte: activeSince },
     });
    
-     const { successRate, errorRate } = getMetrics();
+     const { successRate, errorRate,totalRequests } = getMetrics();
     res.json({
       uptime: Number(uptime),  // in seconds
       responseTime, // in ms                      
       activeUsers,
       successRate,
-      errorRate                     
+      errorRate,
+      totalRequests                     
     });
   } catch (err) {
     console.error("System health check failed:", err);

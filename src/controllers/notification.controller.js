@@ -104,7 +104,7 @@ export const RespondToBrokerRequest = async (req, res) => {
     notification.action_required = false;
     await notification.save();
 
-    if (response === "approved") {
+    if (response === "accepted") {
   const model =
     notification.listing_type === "Vehicle" ? Vehicle : Property;
 
