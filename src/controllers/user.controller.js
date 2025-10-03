@@ -389,3 +389,20 @@ export const GetBrokerAnalytics = async (req, res) => {
     return res.status(500).json({ message: "Server Error" });
   }
 };
+
+export const Delete = async (req, res) => {
+  try {
+    const userId = req.user.id; // From JWT middleware
+
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({ error: "User not found or already deleted" });
+    }
+
+    res.status(200).json({ message: "User account deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+}

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   GetNotifications,
+  GetPendingRequestsByBroker,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   RespondToBrokerRequest,
@@ -183,5 +184,6 @@ router.patch("/:id/read", AuthMiddleWare, markNotificationAsRead);
  */
 router.patch("/read-all", AuthMiddleWare, markAllNotificationsAsRead);
 router.post("/respond-to-broker-request",RespondToBrokerRequest)
+router.get("/pendingrequest",GetPendingRequestsByBroker);
 
 export default router;

@@ -191,3 +191,47 @@ const existingDeal = await Deal.findOne({
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+export const GetPendingRequestsByBroker = async (req, res) => {
+  const { broker_id, page = 1, limit = 10 } = req.query;
+
+  if (!broker_id || !mongoose.Types.ObjectId.isValid(broker_id)) {
+    return res.status(400).json({ message: "Invalid or missing broker_id" });
+  }
+
+  try {
+    const query = {
+      broker_id,
+      type: "request",
+      status: "pending",
+    };
+
+    const notifications = await Notifications.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .populate("client_id", "firstName lastName email phoneNumber photo")
+      .populate("broker_id", "firstName lastName email phoneNumber photo")
+      .populate({
+        path: "listing_id",
+        populate: {
+          path: "owner_id",
+          select: "firstName lastName photo email phoneNumber",
+        },
+      });
+
+    const total = await Notifications.countDocuments(query);
+
+    return res.status(200).json({
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      notifications,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
