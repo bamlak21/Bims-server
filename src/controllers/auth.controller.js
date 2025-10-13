@@ -3,7 +3,7 @@ import { Admin } from "../models/admin.model.js";
 import { createToken } from "../utils/jwtUtils.js";
 import { createAdminToken } from "../utils/jwtUtils.js";
 import bcrypt from "bcrypt";
-import { sendOtp } from "../utils/OTP.js";
+import { sendOtpemail } from "../utils/OTP.js";
 import { CreateNotification } from "../services/notificationService.js";
 
 export const Register = async (req, res) => {
@@ -336,7 +336,7 @@ export const forgotPassword = async (req, res) => {
 
     // Generate and send OTP
     const receiverEmail = user.email;
-    const otp = await sendOtp(receiverEmail);
+    const otp = await sendOtpemail(receiverEmail);
 
     // Save OTP and expiry (5 minutes from now)
     user.otp = otp;

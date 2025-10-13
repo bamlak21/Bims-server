@@ -7,18 +7,27 @@ if (!process.env.MAILTRAP_TOKEN) {
   throw new Error("Mailtrap Token missing");
 }
 const Token = process.env.MAILTRAP_TOKEN;
-function generateOtp() {
-  return Math.floor(Math.random() * 1000000)
-    .toString()
-    .padStart(6, "0");
-}
+// function generateOtp() {
+//   return Math.floor(Math.random() * 1000000)
+//     .toString()
+//     .padStart(6, "0");
+// }
 
-export async function sendOtp(receiverEmail) {
+const generateOtp=(length = 6)=> {
+    let otp = "";
+    const digits = "0123456789";
+    for (let i = 0; i < length; i++) {
+      otp += digits[Math.floor(Math.random() * digits.length)];
+    }
+    return otp;
+  }
+  
+export async function sendOtpemail(receiverEmail) {
+  
   const SENDER_EMAIL = "hello@nileode.com";
   const otp = generateOtp();
-  const sender = { name: "Bamlak", email: "hello@bamlak.dev" };
+  const sender = { name: "Bamlak", email: SENDER_EMAIL };
   const client = new MailtrapClient({ token: Token });
-
   try {
     await client.send({
       from: sender,
