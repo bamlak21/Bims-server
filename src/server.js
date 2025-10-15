@@ -42,14 +42,13 @@ app.use(
 );
 
 app.use((req, res, next) => {
-  res.on('finish', () => {
-    if (req.originalUrl !== '/api/admin/system-health') {
+  res.on("finish", () => {
+    if (req.originalUrl !== "/api/admin/system-health") {
       incrementRequest(res.statusCode);
     }
   });
   next();
 });
-
 
 RegisterSocket(io);
 

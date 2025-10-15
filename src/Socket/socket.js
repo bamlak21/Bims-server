@@ -5,46 +5,54 @@ export function RegisterSocket(io) {
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
-    // join or create a room
     socket.on("joinRoom", async ({ roomId, userId, participants }) => {
-      let room;
+      try {
+        let room;
 
-      if (roomId) {
-        // if frontend sends a specific roomId
-        room = await ChatRoom.findById(roomId);
-      } else {
-        // check if a room already exists with the same participants (ignoring order)
-        room = await ChatRoom.findOne({
-          participants: { $all: participants },
-        });
+        if (roomId) {
+          room = await ChatRoom.findById(roomId);
+          if (!room) return socket.emit("error", { message: "Room not found" });
+        } else {
+          const sortedParticipants = participants.sort();
 
-        if (!room) {
-          // create a new room if none exists
-          room = new ChatRoom({ participants });
-          await room.save();
+          // Ensure exact match of participants
+          room = await ChatRoom.findOne({
+            participants: {
+              $all: sortedParticipants,
+              $size: sortedParticipants.length,
+            },
+          });
+
+          if (!room) {
+            room = await ChatRoom.create({ participants: sortedParticipants });
+          }
         }
+
+        socket.join(room._id.toString());
+        console.log(`User ${userId} joined room: ${room._id}`);
+
+        socket.emit("roomJoined", {
+          roomId: room._id,
+          participants: room.participants,
+        });
+      } catch (err) {
+        console.error("joinRoom error:", err);
+        socket.emit("error", { message: "Failed to join room" });
       }
-
-      socket.join(room._id.toString());
-      console.log(`User ${userId} joined room: ${room._id}`);
-
-      socket.emit("roomJoined", {
-        roomId: room._id,
-        participants: room.participants,
-      });
     });
 
-    // send and save message
     socket.on("chatMessage", async ({ roomId, userId, message }) => {
-      const msg = new Message({ roomId, sender: userId, message });
-      await msg.save();
-
-      io.to(roomId).emit("chatMessage", {
-        roomId,
-        userId,
-        message,
-        createdAt: msg.createdAt,
-      });
+      try {
+        const msg = await Message.create({ roomId, senderId: userId, message });
+        io.to(roomId).emit("chatMessage", {
+          roomId,
+          senderId: userId,
+          message,
+          timestamp: msg.createdAt,
+        });
+      } catch (err) {
+        console.error("chatMessage error:", err);
+      }
     });
 
     socket.on("disconnect", () => {
