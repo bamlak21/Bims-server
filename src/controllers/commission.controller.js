@@ -5,7 +5,7 @@ export const GetCommissions = async (req, res) => {
     const commission = await Commission.find()
       .populate("broker_id", "name email")
       .populate("owner_id", "name email")
-      .populate("buyer_id", "name email")
+      .populate("client_id", "name email")
       .lean();
 
     if (commission.length === 0) {
