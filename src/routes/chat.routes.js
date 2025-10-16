@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  CreateChatRoomAndSendMessage,
   GetChatRooms,
   GetMessagesForChat,
 } from "../controllers/chat.controller.js";
@@ -113,5 +114,5 @@ router.get("/chat-rooms/:userId", GetChatRooms);
  */
 
 router.get("/chat-rooms/messages/:roomId", GetMessagesForChat);
-
+router.post('/create-chat',CreateChatRoomAndSendMessage);
 export default router;
