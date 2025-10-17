@@ -3,6 +3,7 @@ import ChatRoom from "../models/chat.model.js";
 import Message from "../models/message.model.js";
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
+import { onlineUsers } from "../Socket/socketManager.js"; 
 
 
 export const GetChatRooms = async (req, res) => {
@@ -57,7 +58,6 @@ if (!isValidObjectId) {
   }
 };
 
-
 export const CreateChatRoomAndSendMessage = async (req, res) => {
   const { listingId, senderId, text, type } = req.body;
 
@@ -93,7 +93,7 @@ export const CreateChatRoomAndSendMessage = async (req, res) => {
       new mongoose.Types.ObjectId(senderId),
     ].filter(Boolean);
 
-    // Find if room already exists with same listing and exact participants
+    // Check if chat room already exists
     let chatRoom = await ChatRoom.findOne({
       listingId,
       participants: { $all: participants, $size: participants.length },
@@ -108,16 +108,34 @@ export const CreateChatRoomAndSendMessage = async (req, res) => {
       await chatRoom.save();
     }
 
+    // Determine online status of sender and other participants
+    const senderOnline = onlineUsers.has(senderId);
+    
+    // Determine message status based on whether receivers are online
+    const receiverIds = participants.filter(
+      (p) => p.toString() !== senderId.toString()
+    );
+    
+    const anyReceiverOnline = receiverIds.some((receiverId) =>
+      onlineUsers.has(receiverId.toString())
+    );
+
+    const messageStatus = anyReceiverOnline ? "delivered" : "sent";
+
     const message = new Message({
-      senderId: senderId,
+      senderId,
       roomId: chatRoom._id,
       message: text || `Hello, I'm interested in your listing.`,
+      status: messageStatus,
     });
-    console.log("Sender ID:", senderId);
 
     await message.save();
 
-    return res.status(201).json({ message: "Chat room created and message sent", chatRoom, message });
+    return res.status(201).json({
+      message: "Chat room created and message sent",
+      chatRoom,
+      message,
+    });
   } catch (error) {
     console.error("Chat error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
