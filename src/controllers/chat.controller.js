@@ -50,7 +50,7 @@ if (!isValidObjectId) {
     return res.status(400).json({ message: "Missing required fields" });
   }
   try {
-    const messages = await Message.find({ roomId: roomId });
+    const messages = await Message.find({ roomId: roomId }).populate("senderId","userType");
     return res.status(200).json({ message: "Success", messages });
   } catch (error) {
     console.error("Failed to fetch messages for chat room: ", error);
