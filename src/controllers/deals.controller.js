@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Deal } from "../models/deals.model.js";
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
@@ -86,3 +87,30 @@ export const getDealById = async (req, res) => {
 //     res.status(500).json({ message: 'Server error' });
 //   }
 // };
+
+export const getCreatedDeals = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const deals = await Deal.find({ client_id: userId }) // Filter by authenticated user's client_id
+      .populate("listing_id", "_id title")
+      .populate("owner_id", "firstName lastName")
+      .populate("broker_id", "firstName lastName")
+      .sort({ createdAt: -1 });
+
+    res.json({ deals });
+  } catch (err) {
+    console.error("Error fetching created deals:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+

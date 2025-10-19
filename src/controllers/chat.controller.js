@@ -4,6 +4,8 @@ import Message from "../models/message.model.js";
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { onlineUsers } from "../Socket/socketManager.js"; 
+import { Deal } from "../models/deals.model.js";
+import { User } from "../models/user.model.js";
 
 
 export const GetChatRooms = async (req, res) => {
@@ -50,7 +52,7 @@ if (!isValidObjectId) {
     return res.status(400).json({ message: "Missing required fields" });
   }
   try {
-    const messages = await Message.find({ roomId: roomId }).populate("senderId","userType");
+    const messages = await Message.find({ roomId: roomId }).populate("senderId","userType photo");
     return res.status(200).json({ message: "Success", messages });
   } catch (error) {
     console.error("Failed to fetch messages for chat room: ", error);
@@ -87,35 +89,61 @@ export const CreateChatRoomAndSendMessage = async (req, res) => {
       return res.status(404).json({ message: "Listing not found" });
     }
 
+    const broker_id = listing?.broker_id?._id;
+    const senderUser = await User.findById(senderId);
+
+    if (!senderUser) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
+    // Deal check for clients
+    const deal = await Deal.findOne({ listing_id: listingId, broker_id });
+
+    if (senderUser.userType === "client") {
+      const client_id = senderUser._id;
+
+      if (deal?.client_id && deal.client_id.toString() !== client_id.toString()) {
+        return res.status(403).json({
+          message: "This deal is already assigned to another client. You cannot contact the broker.",
+        });
+      }
+
+      // ✅ Check for existing chat room for same client + listing
+      const existingRoom = await ChatRoom.findOne({
+        listingId,
+        createdBy: client_id,
+      });
+
+      if (existingRoom) {
+        return res.status(403).json({
+          message: "Chat room already exists",
+          chatRoom: existingRoom,
+        });
+      }
+    }
+
+    // Create participants list
     const participants = [
       listing.broker_id?._id,
       listing.owner_id?._id,
-      new mongoose.Types.ObjectId(senderId),
+      senderUser._id,
     ].filter(Boolean);
 
-    // Check if chat room already exists
-    let chatRoom = await ChatRoom.findOne({
+    // ✅ Create new chat room with title and tracking
+    const chatRoom = new ChatRoom({
+      name: `Chat about ${listing.title || "listing"}`,
+      participants,
       listingId,
-      participants: { $all: participants, $size: participants.length },
+      createdBy: senderUser._id,
     });
 
-    if (!chatRoom) {
-      chatRoom = new ChatRoom({
-        name: `Chat about ${listing.title || "listing"}`,
-        participants,
-        listingId,
-      });
-      await chatRoom.save();
-    }
+    await chatRoom.save();
 
-    // Determine online status of sender and other participants
-    const senderOnline = onlineUsers.has(senderId);
-    
-    // Determine message status based on whether receivers are online
+    // Message delivery status
     const receiverIds = participants.filter(
       (p) => p.toString() !== senderId.toString()
     );
-    
+
     const anyReceiverOnline = receiverIds.some((receiverId) =>
       onlineUsers.has(receiverId.toString())
     );
@@ -137,6 +165,18 @@ export const CreateChatRoomAndSendMessage = async (req, res) => {
       message,
     });
   } catch (error) {
+    // Duplicate chat room (e.g. created in parallel click)
+    if (error.code === 11000) {
+      const existingRoom = await ChatRoom.findOne({
+        listingId,
+        createdBy: senderId,
+      });
+      return res.status(200).json({
+        message: "Chat room already exists",
+        chatRoom: existingRoom,
+      });
+    }
+
     console.error("Chat error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }

@@ -131,38 +131,50 @@ export const fetchListing = async (req, res) => {
       search,
     } = req.query;
 
-    const userId = req.user?.id; // assuming you set user in auth middleware
+    const userId = req.user?._id || req.user?.id; // Current logged-in user
     const skip = (page - 1) * limit;
-    const pagination = { page: Number(page), limit: Number(limit) };
 
+    // Fetch deals assigned to the current user
+    const userDeals = await Deal.find({ client_id: userId })
+      .select("listing_id")
+      .lean();
+    const userDealListingIds = userDeals.map((deal) => deal.listing_id?.toString());
+
+    // Fetch all deals with clients assigned (to exclude others' deals)
+    const allDeals = await Deal.find({ client_id: { $exists: true } })
+      .select("listing_id client_id")
+      .lean();
+
+    // Extract listings assigned to other clients
+    const listingsAssignedToOthers = allDeals
+      .filter((deal) => deal.client_id?.toString() !== userId)
+      .map((deal) => deal.listing_id?.toString());
+
+    // Build filter dynamically
     const buildFilter = (type) => {
-      const filter = {};
+      const filter = {
+        _id: { $nin: listingsAssignedToOthers }, // Exclude listings assigned to other clients
+      };
       if (minPrice || maxPrice) {
         filter.price = {};
         if (minPrice) filter.price.$gte = Number(minPrice);
         if (maxPrice) filter.price.$lte = Number(maxPrice);
       }
-      if (category && category !== "all") {
-        filter.category = category;
-      }
+      if (category && category !== "all") filter.category = category;
       if (search) {
         const regex = new RegExp(search, "i");
-        if (type === "property") {
-          filter.$or = [
-            { title: regex },
-            { "location.city": regex },
-            { "location.subcity": regex },
-          ];
-        } else if (type === "vehicle") {
-          filter.$or = [{ title: regex }];
-        }
-        else {
-        // general fallback
-        filter.$or = [{ title: regex }];
-      }
+        filter.$or = [
+          { title: regex },
+          { "location.city": regex },
+          { "location.subcity": regex },
+        ];
       }
       return filter;
     };
+
+    console.log("User ID:", userId);
+    console.log("User Deal Listing IDs:", userDealListingIds);
+    console.log("Listings assigned to others:", listingsAssignedToOthers);
 
     const fetchData = (Model, type) =>
       Model.find(buildFilter(type))
@@ -173,13 +185,8 @@ export const fetchListing = async (req, res) => {
         .then((data) =>
           data.map((item) => ({
             ...item,
-            owner: item.owner_id
-              ? {
-                  firstName: item.owner_id.firstName,
-                  lastName: item.owner_id.lastName,
-                }
-              : null,
             type,
+            isAssignedToCurrentUser: userDealListingIds.includes(item._id?.toString()),
           }))
         );
 
@@ -204,14 +211,13 @@ export const fetchListing = async (req, res) => {
     return res.status(200).json({
       message: "Listings fetched successfully",
       listings,
-      pagination: { ...pagination, totalItems, totalPages },
+      pagination: { page: Number(page), limit: Number(limit), totalItems, totalPages },
     });
   } catch (err) {
     console.error("Error fetching listings:", err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 export const fetchListingCount = async (req, res) => {
   const { id } = req.params;
 
@@ -427,8 +433,11 @@ export const AssignClientToDeal = async (req, res) => {
     if (deal.client_id && deal.client_id.toString() !== client_id) {
       return res
         .status(400)
-        .json({ message: "Deal already assigned to another client" });
+        // .json({ message: "Deal already assigned to another client" });
     }
+    if (deal.client_id && deal.client_id.toString() === client_id) {
+  return res.status(200).json({ message: "Client already assigned", deal });
+}
 
     // Assign client
     deal.client_id = client_id;

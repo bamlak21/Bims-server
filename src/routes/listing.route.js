@@ -14,6 +14,7 @@ import {
   verifyListing,
 } from "../controllers/listing.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
+import { AuthMiddleWare } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -316,7 +317,7 @@ router.get("/fetchlistcount/:id", fetchListingCount);
  *                   type: string
  *                   example: Internal Server Error
  */
-router.get("/fetch", fetchListing);
+router.get("/fetch",AuthMiddleWare ,fetchListing);
 
 /**
  * @swagger
