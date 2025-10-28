@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { getCreatedDeals, getDealById, getDealsByBroker } from "../controllers/deals.controller.js";
-import { AuthMiddleWare } from "../middleware/auth.middleware.js";
+import { getDealById,getDealsByBroker, getDealsByUser, updateDeal } from "../controllers/deals.controller.js";
 
 
 const router = Router();
-
+router.get("/createdDeals",getDealsByUser)
 router.get("/fetchdeals",getDealsByBroker)
 router.get("/:id",getDealById)
-router.get("/",AuthMiddleWare,getCreatedDeals);
+router.patch("/update/:id",updateDeal);
+// router.get("/",AuthMiddleWare,getCreatedDeals);
 
 export default router;

@@ -1,4 +1,4 @@
-import { Commission } from "../models/commission.model.js";
+import { Commission } from "../models/commision.model.js";
 
 export const CreateCommission = async ({
   broker_id,
@@ -8,7 +8,7 @@ export const CreateCommission = async ({
   listing_type,
   sale_price,
 }) => {
-  const commissionRate = 0.15;
+  const commissionRate = 0.03;
   const total_commission = sale_price * commissionRate;
 
   const owner_share = total_commission / 2;

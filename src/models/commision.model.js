@@ -56,7 +56,7 @@ const CommissionSchema = new Schema({
   due_date: Date, // when commission must be paid
   audit_log: [
     {
-      actor: String, // "broker", "owner", "client", "admin"
+      actor: String, // "broker", "owner", "client"
       action: String,
       ref:String, //txRef from Chapa
       timestamp: { type: Date, default: Date.now },

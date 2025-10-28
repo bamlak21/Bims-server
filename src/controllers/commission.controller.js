@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Commission } from "../models/commision.model.js";
 
 export const GetCommissions = async (req, res) => {
@@ -63,4 +64,21 @@ export const GetCommissionByListingId = async (req, res) => {
   }
 };
 
-// export const
+export const getCommissionById = async (req, res) => {
+  try {
+    const { commissionId } = req.params;
+    if(!mongoose.Types.ObjectId.isValid(commissionId)) {
+      return res.status(400).json({ message: "Invalid commission ID" });
+    }
+    const commission = await Commission.findById(commissionId)
+      .populate("broker_id owner_id client_id", "firstName lastName email phone")
+      .populate("listing_id");
+
+    if (!commission) return res.status(404).json({ message: "Commission not found" });
+
+    res.json(commission);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

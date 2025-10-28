@@ -388,22 +388,67 @@ export const MyListings = async (req, res) => {
 };
 
 export const getAssignedListings = async (req, res) => {
-  const { brokerId, type } = req.query;
+  const { brokerId, type, search, category, minPrice, maxPrice } = req.query;
 
   if (!brokerId || !type) {
     return res.status(400).json({ message: "Missing brokerId or type" });
   }
-  const normalizedType =
-    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 
   try {
+    const brokerObjectId = new mongoose.Types.ObjectId(brokerId);
+
+    const filters = {
+      broker_id: brokerObjectId,
+      is_broker_assigned: true,
+    };
+
+    // Category filter
+    if (category && category.toLowerCase() !== "all") {
+      filters.category = category.toLowerCase();
+    }
+
+    // Price range filter
+    if (minPrice != null || maxPrice != null) {
+      filters.price = {};
+      if (minPrice != null) filters.price.$gte = Number(minPrice);
+      if (maxPrice != null) filters.price.$lte = Number(maxPrice);
+    }
+
+    // Search logic — we'll add it below using regex
+    const searchQuery = search
+      ? {
+          $or: [
+            { title: { $regex: search, $options: "i" } },
+            { "location.city": { $regex: search, $options: "i" } },
+            { "location.subcity": { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    // Handle 'all' type (fetch from both Vehicle and Property models)
+    if (type.toLowerCase() === "all") {
+      const [vehicles, properties] = await Promise.all([
+        Vehicle.find({ ...filters, ...searchQuery })
+        .populate("broker_id","firstName lastName"),
+        Property.find({ ...filters, ...searchQuery })
+        .populate("broker_id","firstName lastName"),
+      ]);
+
+      const allListings = [...vehicles, ...properties].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      return res.status(200).json(allListings);
+    }
+
+    // If specific type
+    const normalizedType =
+      type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
 
     const listings = await model
-      .find({
-        broker_id: brokerId,
-        is_broker_assigned: true,
-      })
+      .find({ ...filters, ...searchQuery })
       .sort({ createdAt: -1 });
 
     res.status(200).json(listings);
