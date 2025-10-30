@@ -44,25 +44,25 @@ const CommissionSchema = new Schema({
   status: {
     type: String,
     enum: [
-      "pending",        // agreement created
+      "pending", // agreement created
       "awaiting_payment", // property deal confirmed, commission unpaid
-      "paid",           // commission settled
-      "disputed",       // broker claims unpaid commission
-      "resolved"        // admin resolved dispute
+      "paid", // commission settled
+      "disputed", // broker claims unpaid commission
+      "resolved", // admin resolved dispute
     ],
     default: "pending",
   },
-   invoice_url: String, // auto-generated commission invoice PDF
+  invoice_url: String, // auto-generated commission invoice PDF
+  tx_ref: String,
   due_date: Date, // when commission must be paid
-  audit_log: [
-    {
-      actor: String, // "broker", "owner", "client"
-      action: String,
-      ref:String, //txRef from Chapa
-      timestamp: { type: Date, default: Date.now },
-    },
-  ],
-  
+  // audit_log: [
+  //   {
+  //     actor: String, // "broker", "owner", "client"
+  //     action: String,
+  //     ref: String, //txRef from Chapa
+  //     timestamp: { type: Date, default: Date.now },
+  //   },
+  // ],
 });
 
 export const Commission = model("Commission", CommissionSchema);

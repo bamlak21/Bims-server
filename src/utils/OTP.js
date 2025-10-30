@@ -13,17 +13,16 @@ const Token = process.env.MAILTRAP_TOKEN;
 //     .padStart(6, "0");
 // }
 
-const generateOtp=(length = 6)=> {
-    let otp = "";
-    const digits = "0123456789";
-    for (let i = 0; i < length; i++) {
-      otp += digits[Math.floor(Math.random() * digits.length)];
-    }
-    return otp;
+const generateOtp = (length = 6) => {
+  let otp = "";
+  const digits = "0123456789";
+  for (let i = 0; i < length; i++) {
+    otp += digits[Math.floor(Math.random() * digits.length)];
   }
-  
+  return otp;
+};
+
 export async function sendOtpemail(receiverEmail) {
-  
   const SENDER_EMAIL = "hello@nileode.com";
   const otp = generateOtp();
   const sender = { name: "Bamlak", email: SENDER_EMAIL };
@@ -37,7 +36,7 @@ export async function sendOtpemail(receiverEmail) {
     });
     return otp; // <-- return OTP for storage
   } catch (err) {
-    console.log(err);
-    throw err;
+    console.log("Failed to send otp", err);
+    // throw err;
   }
 }

@@ -4,6 +4,8 @@ import {
   getCommissionById,
   GetCommissionByListingId,
   GetCommissions,
+  PayCommission,
+  verifyCommissionPayment,
 } from "../controllers/commission.controller.js";
 
 const router = Router();
@@ -80,7 +82,7 @@ const router = Router();
  */
 
 router.get("/get-all-commissions", GetCommissions);
-router.get("/getcommissionid",GetCommissionByListingId)
+router.get("/getcommissionid", GetCommissionByListingId);
 
 /**
  * @swagger
@@ -144,4 +146,152 @@ router.get("/getcommissionid",GetCommissionByListingId)
 router.get("/broker", GetBrokerCommissions);
 router.get("/:commissionId", getCommissionById);
 
+/**
+ * @swagger
+ * /api/commissions/pay:
+ *   post:
+ *     summary: Initialize payment for a commission
+ *     description: Creates a payment session for a given commission and returns the payment URL.
+ *     tags:
+ *       - Commissions
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - commissionId
+ *               - user_id
+ *             properties:
+ *               amount:
+ *                 type: number
+ *                 example: 250.5
+ *                 description: The amount to be paid.
+ *               commissionId:
+ *                 type: string
+ *                 example: "671fbc26e0d1a5314a8cd111"
+ *                 description: The ID of the commission to be paid.
+ *               user_id:
+ *                 type: string
+ *                 example: "671fbc26e0d1a5314a8cd222"
+ *                 description: The ID of the user who owns the commission.
+ *     responses:
+ *       200:
+ *         description: Payment initialization successful.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Payment initialization successful
+ *                 url:
+ *                   type: string
+ *                   example: "https://checkout.example.com/pay/tx-12345"
+ *                 tx_ref:
+ *                   type: string
+ *                   example: "tx-12345"
+ *       400:
+ *         description: Missing required fields.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Missing required fields
+ *       404:
+ *         description: Commission not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Commission not found
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
+
+router.post("/pay", PayCommission);
+
+/**
+ * @swagger
+ * /api/commissions/verify:
+ *   get:
+ *     summary: Verify a commission payment
+ *     description: Verifies a transaction reference (tx_ref) with the payment provider and updates the commission status to "paid" if successful.
+ *     tags:
+ *       - Commissions
+ *     parameters:
+ *       - in: query
+ *         name: tx_ref
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "tx-12345"
+ *         description: The unique transaction reference to verify.
+ *     responses:
+ *       200:
+ *         description: Transaction verified successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Transaction verified successfully
+ *                 tx_ref:
+ *                   type: string
+ *                   example: tx-12345
+ *                 status:
+ *                   type: string
+ *                   example: paid
+ *       400:
+ *         description: Missing required query parameter.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Missing required fields
+ *       404:
+ *         description: Transaction not verified or commission not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Transaction not verified
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
+
+router.get("/verify", verifyCommissionPayment);
 export default router;
