@@ -23,7 +23,7 @@ const generateOtp = (length = 6) => {
 };
 
 export async function sendOtpemail(receiverEmail) {
-  const SENDER_EMAIL = "hello@nileode.com";
+  const SENDER_EMAIL = "hello@bamlak.dev";
   const otp = generateOtp();
   const sender = { name: "Bamlak", email: SENDER_EMAIL };
   const client = new MailtrapClient({ token: Token });

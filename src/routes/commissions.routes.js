@@ -5,9 +5,10 @@ import {
   GetCommissionByListingId,
   GetCommissions,
   PayCommission,
+  updateCommissionDecision,
   verifyCommissionPayment,
 } from "../controllers/commission.controller.js";
-
+import {AuthMiddleWare} from "../middleware/auth.middleware.js"
 const router = Router();
 
 /**
@@ -294,4 +295,5 @@ router.post("/pay", PayCommission);
  */
 
 router.get("/verify", verifyCommissionPayment);
+router.patch("/:commissionId/decision",AuthMiddleWare,updateCommissionDecision);
 export default router;

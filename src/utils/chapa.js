@@ -22,16 +22,20 @@ export const initialization = async (
   amount,
   tx_ref,
   firstName,
-  lastName
+  lastName,
+  email
 ) => {
-  if (!phoneNumber || !amount || !tx_ref) {
+  if (!phoneNumber || !amount || !tx_ref || !email) {
     console.error("Missing Required fields");
   }
   const url = "https://api.chapa.co/v1/transaction/initialize";
   try {
+    // const currentUrl = window.location.href;
     const reqBody = {
-      firstName: firstName || "",
-      lastName: lastName || "",
+      first_name: firstName || "",
+      last_name: lastName || "",
+      email,
+      phone_number:phoneNumber,
       amount: amount,
       tx_ref: tx_ref,
       currency: "ETB",
@@ -52,10 +56,16 @@ export const initialization = async (
       url: res.data.data.checkout_url,
     };
   } catch (error) {
-    console.error("Initialization failed", error);
+  console.error("❌ Initialization failed:");
+  if (error.response) {
+    console.error("Status:", error.response.status);
+    console.error("Data:", JSON.stringify(error.response.data, null, 2));
+  } else {
+    console.error("Error:", error.message);
   }
+  return null;
 };
-
+}
 export const verify = async (tx_ref) => {
   if (!tx_ref) return console.error("missing tx_ref");
 

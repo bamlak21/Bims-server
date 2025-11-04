@@ -179,7 +179,9 @@ export const updateDeal = async (req, res) => {
     const updateData = req.body;
 
     // Populate listing_id so we can use its _id later
-    const deal = await Deal.findById(id).populate("listing_id");
+    const deal = await Deal.findById(id).populate("listing_id").populate('client_id', 'firstName lastName')
+      .populate('owner_id', 'firstName lastName')
+      .populate('broker_id', 'firstName lastName');;
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
@@ -221,7 +223,10 @@ export const updateDeal = async (req, res) => {
   // updateDeal controller
 const populatedDeal = await Deal.findById(deal._id)
   .populate('commission_id')
-  .lean();
+  .populate('listing_id')
+  .populate('client_id', 'firstName lastName userType')
+  .populate('owner_id', 'firstName lastName userType')
+  .populate('broker_id', 'firstName lastName userType');
 
 res.json(populatedDeal);   // commission_id is a STRING here because of .lean();
   } catch (error) {

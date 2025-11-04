@@ -90,6 +90,85 @@ export const getCommissionById = async (req, res) => {
   }
 };
 
+export const updateCommissionDecision = async (req, res) => {
+  const { commissionId } = req.params;
+  const { decision, reason } = req.body;
+  const userId = req.user?.id;
+  console.log("→ Logged-in userId:", userId);
+  if (!['accepted', 'rejected'].includes(decision)) {
+    return res.status(400).json({ message: "Invalid decision value. Must be 'accepted' or 'rejected'." });
+  }
+
+  try {
+    // 1️⃣ Find commission with party info
+    const commission = await Commission.findById(commissionId)
+      .populate('client_id', 'firstName lastName userType')
+      .populate('owner_id', 'firstName lastName userType')
+      .populate('broker_id', 'firstName lastName userType');
+
+    if (!commission) {
+      return res.status(404).json({ message: "Commission not found" });
+    }
+
+    // 2️⃣ Identify who made the request
+    const isClient = String(commission.client_id?._id) === String(userId);
+    const isOwner  = String(commission.owner_id?._id) === String(userId);
+
+    if (!isClient && !isOwner) {
+      return res.status(403).json({ message: "Unauthorized: you are not part of this commission" });
+    }
+
+    const userType   = isClient ? "client" : "owner";
+    const statusFld  = `${userType}_status`;
+    const reasonFld  = `${userType}_rejection_reason`;
+
+    // 3️⃣ Prevent duplicate decisions
+    if (commission[statusFld] !== "pending") {
+      return res.status(400).json({
+        message: `You have already ${commission[statusFld]} this commission`
+      });
+    }
+
+    // 4️⃣ Apply decision
+    commission[statusFld] = decision;
+    commission.updatedAt = new Date();
+
+    if (decision === "rejected" && reason?.trim()) {
+      commission[reasonFld] = reason.trim();
+    }
+
+    // 5️⃣ Update overall status
+    if (decision === "accepted") {
+      const otherStatus = isClient ? commission.owner_status : commission.client_status;
+
+      if (otherStatus === "accepted") {
+        // ✅ Both accepted → agreement approved
+        commission.status = "awaiting_payment"; // next step: payments
+      }
+    } else {
+      // ❌ Any rejection → fully rejected
+      commission.status = "rejected";
+    }
+
+    await commission.save();
+    
+
+    // 6️⃣ Return populated commission
+    const updated = await Commission.findById(commission._id)
+      .populate('client_id', 'firstName lastName')
+      .populate('owner_id', 'firstName lastName')
+      .populate('broker_id', 'firstName lastName');
+
+    return res.status(200).json({
+      message: "Decision updated successfully",
+      commission: updated
+    });
+  } catch (error) {
+    console.error("❌ Error updating commission decision:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const PayCommission = async (req, res) => {
   const { amount, commissionId, user_id } = req.body;
 
@@ -100,30 +179,42 @@ export const PayCommission = async (req, res) => {
   const tx_ref = "tx-" + randomUUID();
 
   try {
-    const commission = await Commission.findById(commissionId).populate(
-      "user_id"
-    );
+    const commission = await Commission.findById(commissionId)
+      .populate("client_id")
+      .populate("owner_id")
+      .populate("broker_id");
 
     if (!commission) {
       return res.status(400).json({ message: "Commission doesn't exist" });
     }
 
+    const user =
+      commission.client_id._id.toString() === user_id
+        ? commission.client_id
+        : commission.owner_id;
+
     commission.tx_ref = tx_ref;
     await commission.save();
 
-    const { url } = await initialization(
-      commission.user_id.phoneNumber,
-      amount,
-      tx_ref,
-      commission.user_id.firstName,
-      commission.user_id.lastName
-    );
-    return res.status(200).json({ message: "Success", url: url });
+    const checkoutUrl = await initialization(
+  user.phoneNumber,
+  amount,
+  tx_ref,
+  user.firstName,
+  user.lastName,
+  user.email
+);
+
+   if (!checkoutUrl || !checkoutUrl.url) {
+  return res.status(500).json({ message: "Failed to initialize payment" });
+}
+    return res.status(200).json({ message: "Success", url: checkoutUrl.url});
   } catch (error) {
     console.error("Failed to pay commission", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 export const verifyCommissionPayment = async (req, res) => {
   const { tx_ref } = req.query;

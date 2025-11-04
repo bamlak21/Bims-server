@@ -63,6 +63,21 @@ const CommissionSchema = new Schema({
   //     timestamp: { type: Date, default: Date.now },
   //   },
   // ],
-});
+  client_payment_status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+  owner_payment_status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+  owner_status: {
+      type: String,
+      enum: ["pending", "accepted", "rejected"],
+      default: "pending",
+    },
+    client_status: {
+      type: String,
+      enum: ["pending", "accepted", "rejected"],
+      default: "pending",
+    },
+
+  client_rejection_reason: String,
+  owner_rejection_reason: String,
+},{timestamps:true});
 
 export const Commission = model("Commission", CommissionSchema);

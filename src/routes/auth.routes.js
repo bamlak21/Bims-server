@@ -279,6 +279,6 @@ router.post("/forgot-password", forgotPassword);
 // router.put('/user/:id',updateUserProfile);
 // router.get("/listings", GetListings)
 // router.get('/user-profile', GetUserProfile);
-router.post("verify-otp",verifyOtp)
+router.post("/verify-otp",verifyOtp)
 router.patch("/banUser/:id",banUser)
 export default router;
