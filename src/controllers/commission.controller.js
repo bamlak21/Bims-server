@@ -7,9 +7,11 @@ import { User } from "../models/user.model.js";
 export const GetCommissions = async (req, res) => {
   try {
     const commission = await Commission.find()
-      .populate("broker_id", "name email")
-      .populate("owner_id", "name email")
-      .populate("client_id", "name email")
+      .populate("broker_id", "firstName lastName email")
+      .populate("owner_id", "firstName lastName email")
+      .populate("client_id", "firstName lastName email")
+      .populate("listing_id", "title type category")
+      
       .lean();
 
     if (commission.length === 0) {
@@ -245,3 +247,23 @@ export const verifyCommissionPayment = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const handleWebhook = async(req,res) =>{
+const {tx_ref, status} = req.body;
+
+if(status !== 200){
+return res.status(400).json({message: "payment failed"});
+}
+
+try{
+const commissions = await commissions.findOne({tx_ref:tx_ref});
+
+commissions.status = "paid";
+await commissions.save()
+}
+catch(error){
+ console.error('webhook failed',error);
+ return res.status(400).json({message: "failed webhook"})
+ 
+}
+}

@@ -4,6 +4,7 @@ import {
   getCommissionById,
   GetCommissionByListingId,
   GetCommissions,
+  handleWebhook,
   PayCommission,
   updateCommissionDecision,
   verifyCommissionPayment,
@@ -296,4 +297,5 @@ router.post("/pay", PayCommission);
 
 router.get("/verify", verifyCommissionPayment);
 router.patch("/:commissionId/decision",AuthMiddleWare,updateCommissionDecision);
+router.post("/webhook",handleWebhook)
 export default router;

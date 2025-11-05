@@ -42,16 +42,14 @@ const CommissionSchema = new Schema({
     required: true,
   },
   status: {
-    type: String,
-    enum: [
-      "pending", // agreement created
-      "awaiting_payment", // property deal confirmed, commission unpaid
-      "paid", // commission settled
-      "disputed", // broker claims unpaid commission
-      "resolved", // admin resolved dispute
-    ],
-    default: "pending",
-  },
+  type: String,
+  enum: [
+    "awaiting_payment",
+    "paid",
+    "failed",
+  ],
+  default: "awaiting_payment",
+},
   invoice_url: String, // auto-generated commission invoice PDF
   tx_ref: String,
   due_date: Date, // when commission must be paid

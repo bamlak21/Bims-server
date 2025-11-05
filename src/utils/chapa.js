@@ -39,8 +39,12 @@ export const initialization = async (
       amount: amount,
       tx_ref: tx_ref,
       currency: "ETB",
-      callback_url: `http://localhost:5173/payment/success`,
-      return_url: `http://localhost:5173/payment/success`,
+      callback_url: `https://monopoly-guerdonless-dayle.ngrok-free.dev/api/commissions/webhook`,
+      return_url: `http://localhost:5173/verify-payment`,
+      customization: {
+    title: "BIMS Payment",
+    description: "Commission payment through Chapa",
+  },
     };
 
     opt.url = url;

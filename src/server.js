@@ -50,6 +50,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 RegisterSocket(io);
 
 app.use("/api/auth", authRouter);
@@ -62,6 +63,9 @@ app.use("/api/deals", dealsRouter);
 app.use("/api/report", reportRoute);
 app.use("/api/chat", chatRoute);
 app.use("/uploads", express.static("uploads"));
+app.get("/", (req, res) => {
+  res.send("Server is running!");
+});
 
 async function StartServer() {
   try {
