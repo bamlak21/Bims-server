@@ -30,6 +30,13 @@ const VehicleSchema = new Schema(
       ref: "User",
       default: null,
     },
+    needBroker: {
+  type: String,
+  enum: ["Yes", "No"],
+  required: true,
+  default: "No",
+},
+
     is_broker_assigned: {
       type: Boolean,
       default: false,

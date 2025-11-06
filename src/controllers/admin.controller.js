@@ -7,6 +7,110 @@ import {User} from "../models/user.model.js";
 import mongoose from "mongoose";
 import { getMetrics } from "../utils/metric.js";
 
+export const fetchListing = async (req, res) => {
+  try {
+    const {
+      type = "all",
+      page = 1,
+      limit = 10,
+      minPrice,
+      maxPrice,
+      category,
+      search,
+    } = req.query;
+
+    const userId = req.user?._id || req.user?.id; // Current logged-in user
+    const skip = (page - 1) * limit;
+    const userType = req.user?.userType; 
+
+
+
+    // Fetch deals assigned to the current user
+    const userDeals = await Deal.find({ client_id: userId })
+      .select("listing_id")
+      .lean();
+    const userDealListingIds = userDeals.map((deal) => deal.listing_id?.toString());
+
+    // Fetch all deals with clients assigned (to exclude others' deals)
+    const allDeals = await Deal.find({ client_id: { $exists: true } })
+      .select("listing_id client_id")
+      .lean();
+
+    // Extract listings assigned to other clients
+    const listingsAssignedToOthers = allDeals
+      .filter((deal) => deal.client_id?.toString() !== userId)
+      .map((deal) => deal.listing_id?.toString());
+
+    // Build filter dynamically
+    const buildFilter = (type) => {
+      const filter = {
+        _id: { $nin: listingsAssignedToOthers }, // Exclude listings assigned to other clients
+      };
+      if (minPrice || maxPrice) {
+        filter.price = {};
+        if (minPrice) filter.price.$gte = Number(minPrice);
+        if (maxPrice) filter.price.$lte = Number(maxPrice);
+      }
+      if (category && category !== "all") filter.category = category;
+      if (search) {
+        const regex = new RegExp(search, "i");
+        filter.$or = [
+          { title: regex },
+          { "location.city": regex },
+          { "location.subcity": regex },
+        ];
+      }
+  
+      return filter;
+    };
+
+    console.log("User ID:", userId);
+    console.log("User Deal Listing IDs:", userDealListingIds);
+    console.log("Listings assigned to others:", listingsAssignedToOthers);
+
+    const fetchData = (Model, type) =>
+      Model.find(buildFilter(type))
+        .populate("owner_id", "firstName lastName")
+        .populate("broker_id", "firstName lastName")
+        .sort({ created_at: -1 })
+        .lean()
+        .then((data) =>
+          data.map((item) => ({
+            ...item,
+            type,
+            isAssignedToCurrentUser: userDealListingIds.includes(item._id?.toString()),
+          }))
+        );
+
+    let vehicles = [];
+    let properties = [];
+
+    if (type === "Vehicle" || type === "all") {
+      vehicles = await fetchData(Vehicle, "Vehicle");
+    }
+    if (type === "Property" || type === "all") {
+      properties = await fetchData(Property, "Property");
+    }
+
+    let listings = [...vehicles, ...properties].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+
+    const totalItems = listings.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    listings = listings.slice(skip, skip + Number(limit));
+
+    return res.status(200).json({
+      message: "Listings fetched successfully",
+      listings,
+      pagination: { page: Number(page), limit: Number(limit), totalItems, totalPages },
+    });
+  } catch (err) {
+    console.error("Error fetching listings:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const RejectListing = async (req, res) => {
   const { id, type, reason } = req.body;
 

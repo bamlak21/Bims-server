@@ -4,7 +4,7 @@ const DealSchema = new mongoose.Schema(
     broker_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      // required: true,
     },
     owner_id: {
       type: mongoose.Schema.Types.ObjectId,

@@ -39,6 +39,14 @@ const PropertySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    needBroker: {
+  type: String,
+  enum: ["Yes", "No"],
+  required: true,
+  default: "No",
+},
+
+
     status: {
       type: String,
       enum: ["pending", "draft", "approved", "rejected", "closed"],

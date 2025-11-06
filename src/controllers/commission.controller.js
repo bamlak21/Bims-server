@@ -255,6 +255,9 @@ if(status !== 200){
 return res.status(400).json({message: "payment failed"});
 }
 
+if(status===200){
+  return res.status(200).json({message: "payment successfully done!"})
+}
 try{
 const commissions = await commissions.findOne({tx_ref:tx_ref});
 

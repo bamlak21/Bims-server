@@ -177,15 +177,24 @@ export const updateDeal = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-
+   
     // Populate listing_id so we can use its _id later
     const deal = await Deal.findById(id).populate("listing_id").populate('client_id', 'firstName lastName')
       .populate('owner_id', 'firstName lastName')
-      .populate('broker_id', 'firstName lastName');;
+      .populate('broker_id', 'firstName lastName');
+      
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
+    const ListingModel = deal.listing_type === "Property" ? Property : Vehicle;
+    const listing = await ListingModel.findById(deal.listing_id._id)
+      .select("needBroker")
+      .lean();
+      if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
 
+    const needBroker = listing.needBroker === true || listing.needBroker === "Yes";
     // Apply incoming updates
     Object.assign(deal, updateData);
 
@@ -196,7 +205,7 @@ export const updateDeal = async (req, res) => {
       !deal.commission_id // avoid creating twice
     ) {
       deal.status = "agreement";
-
+      if(needBroker&&deal.broker_id){
       // Capture the returned commission
       const commission = await CreateCommission({
         broker_id: deal.broker_id,
@@ -209,7 +218,22 @@ export const updateDeal = async (req, res) => {
 
       // Link commission to deal
       deal.commission_id = commission._id;
+    }
+    else{
+      const commission = await CreateCommission({
+        broker_id: null,
+        owner_id: deal.owner_id,
+        client_id: deal.client_id,
+        listing_id: deal.listing_id._id,   // populated → real ObjectId
+        listing_type: deal.listing_type,
+        sale_price: deal.listing_snapshot?.price,
+      });
+
+      // Link commission to deal
+      deal.commission_id = commission._id;
+    }
     } 
+  
     else if (
       deal.owner_status === "cancelled" ||
       deal.client_status === "cancelled"

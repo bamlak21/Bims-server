@@ -3,7 +3,7 @@ const CommissionSchema = new Schema({
   broker_id: {
     type: Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+    // required: true,
   },
   owner_id: {
     type: Schema.Types.ObjectId,
