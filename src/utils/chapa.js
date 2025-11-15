@@ -23,7 +23,10 @@ export const initialization = async (
   tx_ref,
   firstName,
   lastName,
-  email
+  email,
+  userType,
+  partyType,
+  commissionId
 ) => {
   if (!phoneNumber || !amount || !tx_ref || !email) {
     console.error("Missing Required fields");
@@ -35,16 +38,25 @@ export const initialization = async (
       first_name: firstName || "",
       last_name: lastName || "",
       email,
+      user_type:userType||"",
       phone_number: phoneNumber,
       amount: amount,
       tx_ref: tx_ref,
       currency: "ETB",
       // callback_url: `https://c2bf9b560d0a.ngrok-free.app/api/commissions/webhook`,
-      return_url: `http://localhost:5173/verify-payment`,
+      callback_url:`https://convivial-theressa-discordantly.ngrok-free.dev/api/commissions/webhook`,
+      // return_url: `http://localhost:5173/verify-payment`,
       customization: {
-        title: "BIMS Payment",
-        description: "Commission payment through Chapa",
-      },
+      title: "BIMS Payment",
+      description: `Paying as ${partyType}`,
+    },
+    // Critical: Send metadata
+    metadata: {
+      commissionId,
+      partyType,        // 'client' or 'owner'
+      userType,
+      initiatedBy: userType
+    }
     };
 
     opt.url = url;

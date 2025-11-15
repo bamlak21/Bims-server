@@ -181,11 +181,21 @@ export const fetchListing = async (req, res) => {
     if (userType === "broker") {
     filter.needBroker = "Yes";
   } else {
-    // Clients: see self-managed OR broker-assigned listings
-    filter.$or = [
+    // client – keep the $or we may have added for search
+    const clientOr = [
       { needBroker: "No" },
-      { needBroker: "false", is_broker_assigned: true }
+      { needBroker: "Yes", is_broker_assigned: true },
     ];
+    if (filter.$or) {
+      // merge search $or with client $or
+      filter.$and = [
+        { $or: filter.$or },
+        { $or: clientOr },
+      ];
+      delete filter.$or;
+    } else {
+      filter.$or = clientOr;
+    }
   }
       return filter;
     };
@@ -500,7 +510,7 @@ export const getAssignedListings = async (req, res) => {
   }
 };
 export const AssignClientToDeal = async (req, res) => {
-  const { listingId, broker_id, client_id, listingType } = req.body;
+  const { listingId, broker_id, client_id, listingType,title } = req.body;
 
   // Required fields
   if (!listingId || !client_id || !listingType) {
@@ -522,9 +532,8 @@ export const AssignClientToDeal = async (req, res) => {
 
     const needBroker = listing.needBroker === true || listing.needBroker === "Yes";
 
-    // =================================================================
     // CASE 1: No Broker Needed (needBroker === "No" or false)
-    // =================================================================
+    
     if (!needBroker) {
       // Find existing deal (any kind: broker or no broker)
       let deal = await Deal.findOne({ listing_id: listingId });
@@ -569,9 +578,9 @@ export const AssignClientToDeal = async (req, res) => {
         .json({ message: "Direct contact established", deal });
     }
 
-    // =================================================================
+    
     // CASE 2: Broker Required (needBroker === true/"Yes")
-    // =================================================================
+  
     if (!broker_id) {
       return res
         .status(400)

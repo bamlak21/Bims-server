@@ -44,11 +44,12 @@ const CommissionSchema = new Schema({
   status: {
   type: String,
   enum: [
+    "pending",
     "awaiting_payment",
     "paid",
     "failed",
   ],
-  default: "awaiting_payment",
+  default: "pending",
 },
   invoice_url: String, // auto-generated commission invoice PDF
   tx_ref: String,
@@ -76,6 +77,16 @@ const CommissionSchema = new Schema({
 
   client_rejection_reason: String,
   owner_rejection_reason: String,
+  payment_attempts: [{
+  tx_ref: String,
+  partyType: { type: String, enum: ['client', 'owner'] },
+  amount: Number,
+  user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+  status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+  initiatedAt: Date
+}],
+client_paid_at: Date,
+owner_paid_at: Date,
 },{timestamps:true});
 
 export const Commission = model("Commission", CommissionSchema);

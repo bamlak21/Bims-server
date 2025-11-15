@@ -21,31 +21,29 @@ export const fetchListing = async (req, res) => {
 
     const userId = req.user?._id || req.user?.id; // Current logged-in user
     const skip = (page - 1) * limit;
-    const userType = req.user?.userType; 
+    // const userType = req.user?.userType; 
 
 
 
     // Fetch deals assigned to the current user
-    const userDeals = await Deal.find({ client_id: userId })
-      .select("listing_id")
-      .lean();
-    const userDealListingIds = userDeals.map((deal) => deal.listing_id?.toString());
+    // const userDeals = await Deal.find({ client_id: userId })
+    //   .select("listing_id")
+    //   .lean();
+    // const userDealListingIds = userDeals.map((deal) => deal.listing_id?.toString());
 
     // Fetch all deals with clients assigned (to exclude others' deals)
-    const allDeals = await Deal.find({ client_id: { $exists: true } })
-      .select("listing_id client_id")
-      .lean();
+    // const allDeals = await Deal.find({ client_id: { $exists: true } })
+    //   .select("listing_id client_id")
+    //   .lean();
 
     // Extract listings assigned to other clients
-    const listingsAssignedToOthers = allDeals
-      .filter((deal) => deal.client_id?.toString() !== userId)
-      .map((deal) => deal.listing_id?.toString());
+    // const listingsAssignedToOthers = allDeals
+    //   .filter((deal) => deal.client_id?.toString() !== userId)
+    //   .map((deal) => deal.listing_id?.toString());
 
     // Build filter dynamically
     const buildFilter = (type) => {
-      const filter = {
-        _id: { $nin: listingsAssignedToOthers }, // Exclude listings assigned to other clients
-      };
+      const filter = {};
       if (minPrice || maxPrice) {
         filter.price = {};
         if (minPrice) filter.price.$gte = Number(minPrice);
@@ -64,9 +62,9 @@ export const fetchListing = async (req, res) => {
       return filter;
     };
 
-    console.log("User ID:", userId);
-    console.log("User Deal Listing IDs:", userDealListingIds);
-    console.log("Listings assigned to others:", listingsAssignedToOthers);
+    // console.log("User ID:", userId);
+    // console.log("User Deal Listing IDs:", userDealListingIds);
+    // console.log("Listings assigned to others:", listingsAssignedToOthers);
 
     const fetchData = (Model, type) =>
       Model.find(buildFilter(type))
@@ -78,7 +76,7 @@ export const fetchListing = async (req, res) => {
           data.map((item) => ({
             ...item,
             type,
-            isAssignedToCurrentUser: userDealListingIds.includes(item._id?.toString()),
+            // isAssignedToCurrentUser: userDealListingIds.includes(item._id?.toString()),
           }))
         );
 

@@ -286,7 +286,9 @@ export const GetBrokerAnalytics = async (req, res) => {
 
     // Total commission
     const totalCommissionEarnings = await Commission.aggregate([
-      { $match: { broker_id: new mongoose.Types.ObjectId(brokerId) } },
+      { $match: { broker_id: new mongoose.Types.ObjectId(brokerId),
+        status:"paid"
+       } },
       {
         $group: {
           _id: null,
@@ -321,7 +323,9 @@ export const GetBrokerAnalytics = async (req, res) => {
 
     // Monthly commissions
     const monthlyCommissions = await Commission.aggregate([
-      { $match: { broker_id: new mongoose.Types.ObjectId(brokerId) } },
+      { $match: { broker_id: new mongoose.Types.ObjectId(brokerId),
+        status:"paid"
+      } },
       {
         $group: {
           _id: { $month: "$createdAt" },
@@ -379,7 +383,8 @@ export const GetBrokerAnalytics = async (req, res) => {
         status: c.status,
         client_payment_status: c.client_payment_status,
         owner_payment_status: c.owner_payment_status,
-        created_at: c.createdAt
+        created_at: c.createdAt,
+        listing_type:c.listing_type
       })))
   }
 });

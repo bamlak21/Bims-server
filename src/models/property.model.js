@@ -22,7 +22,6 @@ const PropertySchema = new mongoose.Schema(
         type: String,
         enum: ["excellent", "good", "fair", "needs_renovation"],
       },
-      swimmingPool: Boolean,
     },
     image_paths: [{ type: String }],
     owner_id: {
@@ -45,8 +44,6 @@ const PropertySchema = new mongoose.Schema(
   required: true,
   default: "No",
 },
-
-
     status: {
       type: String,
       enum: ["pending", "draft", "approved", "rejected", "closed"],
