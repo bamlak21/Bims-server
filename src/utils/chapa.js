@@ -35,16 +35,16 @@ export const initialization = async (
       first_name: firstName || "",
       last_name: lastName || "",
       email,
-      phone_number:phoneNumber,
+      phone_number: phoneNumber,
       amount: amount,
       tx_ref: tx_ref,
       currency: "ETB",
-      callback_url: `https://monopoly-guerdonless-dayle.ngrok-free.dev/api/commissions/webhook`,
+      // callback_url: `https://c2bf9b560d0a.ngrok-free.app/api/commissions/webhook`,
       return_url: `http://localhost:5173/verify-payment`,
       customization: {
-    title: "BIMS Payment",
-    description: "Commission payment through Chapa",
-  },
+        title: "BIMS Payment",
+        description: "Commission payment through Chapa",
+      },
     };
 
     opt.url = url;
@@ -60,16 +60,16 @@ export const initialization = async (
       url: res.data.data.checkout_url,
     };
   } catch (error) {
-  console.error("❌ Initialization failed:");
-  if (error.response) {
-    console.error("Status:", error.response.status);
-    console.error("Data:", JSON.stringify(error.response.data, null, 2));
-  } else {
-    console.error("Error:", error.message);
+    console.error("❌ Initialization failed:");
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error("Error:", error.message);
+    }
+    return null;
   }
-  return null;
 };
-}
 export const verify = async (tx_ref) => {
   if (!tx_ref) return console.error("missing tx_ref");
 

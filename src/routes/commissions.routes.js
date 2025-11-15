@@ -9,7 +9,7 @@ import {
   updateCommissionDecision,
   verifyCommissionPayment,
 } from "../controllers/commission.controller.js";
-import {AuthMiddleWare} from "../middleware/auth.middleware.js"
+import { AuthMiddleWare } from "../middleware/auth.middleware.js";
 const router = Router();
 
 /**
@@ -173,11 +173,11 @@ router.get("/:commissionId", getCommissionById);
  *                 description: The amount to be paid.
  *               commissionId:
  *                 type: string
- *                 example: "671fbc26e0d1a5314a8cd111"
+ *                 example: "68ca721592751e922b673aff"
  *                 description: The ID of the commission to be paid.
  *               user_id:
  *                 type: string
- *                 example: "671fbc26e0d1a5314a8cd222"
+ *                 example: "68a033b95f1ef89a9f29cb14"
  *                 description: The ID of the user who owns the commission.
  *     responses:
  *       200:
@@ -296,6 +296,10 @@ router.post("/pay", PayCommission);
  */
 
 router.get("/verify", verifyCommissionPayment);
-router.patch("/:commissionId/decision",AuthMiddleWare,updateCommissionDecision);
-router.post("/webhook",handleWebhook)
+router.patch(
+  "/:commissionId/decision",
+  AuthMiddleWare,
+  updateCommissionDecision
+);
+router.post("/webhook", handleWebhook);
 export default router;
