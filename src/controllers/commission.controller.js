@@ -4,6 +4,9 @@ import { initialization, verify } from "../utils/chapa.js";
 import { randomUUID } from "crypto";
 import { User } from "../models/user.model.js";
 import { Deal } from "../models/deals.model.js";
+import {CreateNotification} from '../services/notificationService.js'
+import { Property } from "../models/property.model.js";
+import { Vehicle } from "../models/vehicle.model.js";
 
 export const GetCommissions = async (req, res) => {
   try {
@@ -296,56 +299,46 @@ export const verifyCommissionPayment = async (req, res) => {
 export const handleWebhook = async (req, res) => {
   try {
     const event = req.body;
+    const metadata = event.meta || {};
+    const appFee = metadata.app_fee;
+    const commissionType = metadata.commission_type;
 
-    // Log for debugging
     console.log("Webhook received:", JSON.stringify(event, null, 2));
 
-    // 1. Must be charge.success
-    if (event.event !== "charge.success") {
-      console.log("Ignored event:", event.event);
+    if (event.event !== "charge.success" || event.status !== "success" || !event.tx_ref) {
       return res.status(200).send("Ignored");
     }
 
-    // 2. Must have tx_ref and status success
-    if (!event.tx_ref || event.status !== "success") {
-      console.log("Invalid payment status or missing tx_ref");
-      return res.status(400).send("Invalid");
+    const tx_ref = event.tx_ref;
+
+    // 1. Find commission directly by tx_ref (no need for two queries)
+    const commission = await Commission.findOne({ tx_ref });
+    if (!commission) {
+      console.error("Commission not found for tx_ref:", tx_ref);
+      return res.status(404).send("Commission not found");
     }
 
-    const tx_ref = event.tx_ref;
-    const amount = event.amount;
+    // 2. Extract partyType from description
     const description = event.customization?.description || "";
-
-    // 3. Extract partyType from description (you wrote: "Paying as client")
     const partyMatch = description.match(/Paying as (client|owner)/i);
     const partyType = partyMatch ? partyMatch[1].toLowerCase() : null;
 
     if (!partyType || !['client', 'owner'].includes(partyType)) {
-      console.error("Could not determine partyType from:", description);
+      console.error("Unknown partyType from:", description);
       return res.status(400).send("Unknown payer");
     }
 
-    
-    const commissionId = await Commission.findOne({tx_ref:tx_ref});
-
-    // 5. Find commission
-    const commission = await Commission.findById(commissionId);
-    if (!commission) {
-      console.error("Commission not found:", commissionId);
-      return res.status(404).send("Not found");
-    }
-
-    // 6. Prevent double payment
+    // 3. Prevent double-spending
     const alreadyPaid = partyType === 'client'
       ? commission.client_payment_status === 'paid'
       : commission.owner_payment_status === 'paid';
 
     if (alreadyPaid) {
-      console.log(`${partyType} already paid for ${commissionId}`);
+      console.log(`Duplicate: ${partyType} already paid`);
       return res.status(200).send("Already processed");
     }
 
-    // 7. Mark as paid
+    // 4. Mark this side as paid
     if (partyType === 'client') {
       commission.client_payment_status = 'paid';
       commission.client_paid_at = new Date();
@@ -353,36 +346,134 @@ export const handleWebhook = async (req, res) => {
       commission.owner_payment_status = 'paid';
       commission.owner_paid_at = new Date();
     }
-    
-      const otherStatus = isClient
-        ? commission.client_payment_status
-        : commission.owner_payment_status;
 
-      if (otherStatus === "paid") {
-        // ✅ Both paid
-        commission.status = "paid";
-        const deal = await Deal.findById({commission_id:commissionId})
-        deal.status='completed'
-      }
-      else{
-        commission.status = "awaiting_payment";
-      }
-  
-    // 8. Update payment attempt
+    // 5. Update commission status
+    if (commission.client_payment_status === 'paid' && commission.owner_payment_status === 'paid') {
+      commission.status = 'paid';
+
+      // Now correctly find and update the Deal
+      const deal = await Deal.findOneAndUpdate(
+        { commission_id: commission._id }, 
+        { status: 'completed',
+          app_fee: appFee,
+         commission_type: commissionType,
+         },
+        { new: true },
+      );
+       const listingId = commission.listing_id;
+       const model = commission.listing_type ==='Property'? Property:Vehicle; 
+       await model.findOneAndUpdate({
+        _id:listingId
+       },{
+        status:"sold"
+       },{new:true})
+       const updatedListing = await model.findById(listingId);
+       console.log("Listing after update:", updatedListing.status);
+       console.log("Updating listing:", listingId);
+      if (!deal) console.log("Deal not found for commission:", commission._id);
+      else console.log("Deal completed:", deal._id);
+    } else {
+      commission.status = 'awaiting_payment';
+    }
+
+    // 6. Update payment attempt inside the array
     const attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
     if (attempt) {
       attempt.status = 'paid';
-      attempt.completedAt = new Date();
+      // attempt.completedAt = new Date();
     }
 
     await commission.save();
 
-    console.log(`Payment SUCCESS! ${partyType} paid ${amount} ETB for commission ${commissionId}`);
-
+    console.log(`✅ ${partyType.toUpperCase()} paid ${event.amount} ETB – tx_ref: ${tx_ref}`);
     return res.status(200).send("OK");
 
   } catch (error) {
-    console.error("Webhook crashed:", error);
+    console.error("Webhook error:", error);
     return res.status(500).send("Server error");
+  }
+};
+export const sendPaymentReminder = async (req, res) => {
+ 
+  try {
+    const { commissionId, type } = req.body; // 'client' or 'owner'
+    
+    // FIX 1: Use _id, not .id
+    const brokerId = req.user?.id?.toString();
+    if (!brokerId) {
+      return res.status(401).json({ message: "Unauthorized: Invalid user" });
+    }
+
+    const commission = await Commission.findById(commissionId)
+      .populate("listing_id client_id owner_id broker_id");
+
+    if (!commission) {
+      return res.status(404).json({ message: "Commission not found" });
+    }
+
+    // FIX 2: Compare using _id
+    if (commission.broker_id?._id?.toString() !== brokerId) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const paymentStatusField =
+      type === "client" ? "client_payment_status" : "owner_payment_status";
+
+    const recipient = type === "client" ? commission.client_id : commission.owner_id;
+    const recipientName = type === "client" ? "Client" : "Owner";
+
+    // FIX 3: Safe access to recipient._id
+    if (!recipient?._id) {
+      return res.status(400).json({ message: `${recipientName} information missing` });
+    }
+
+    const recipientId = recipient._id.toString();
+
+    if (commission[paymentStatusField] === "paid") {
+      return res.status(400).json({ message: `${recipientName} has already paid` });
+    }
+
+    const listing = commission.listing_id;
+    if (!listing?._id || !listing.title) {
+      return res.status(400).json({ message: "Listing data incomplete" });
+    }
+
+    const amount = type === 'client'? commission.client_share:commission.owner_share
+    const listingTitle = listing.title;
+
+    const message = `Your commission payment of ETB ${amount} for "${listingTitle}" is still pending. Please complete payment as soon as possible. Thank you!`;
+
+    // Create Notification
+    await CreateNotification({
+      userId: recipientId,
+      type: "payment_reminder",
+      listingId: listing._id,
+      listingType: listing.type, // Property or Vehicle
+      message,
+      is_read: false,
+      link: `/deal/${commission._id}`,
+      brokerId: commission.broker_id._id,
+      clientId: type === "client" ? recipientId : null,
+      status: "pending",
+      amount: amount,
+    });
+
+    // Log reminder
+    // commission.reminders = commission.reminders || [];
+    // commission.reminders.push({
+    //   type,
+    //   sentAt: new Date(),
+    //   sentBy: brokerId
+    // });
+    await commission.save();
+
+    return res.json({
+      success: true,
+      message: `Payment reminder sent to ${recipientName}`
+    });
+
+  } catch (error) {
+    console.error("Reminder failed:", error);
+    return res.status(500).json({ message: "Failed to send reminder" });
   }
 };

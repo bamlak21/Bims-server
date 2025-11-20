@@ -176,7 +176,10 @@ const router = Router();
  *                   type: string
  */
 
-router.post("/create", upload.array("images", 5), CreateListing);
+router.post("/create",  upload.fields([
+    { name: "images", maxCount: 5 },
+    { name: "proofimages", maxCount: 2 }
+  ]), CreateListing);
 
 /**
  * @swagger

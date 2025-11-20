@@ -26,7 +26,9 @@ export const initialization = async (
   email,
   userType,
   partyType,
-  commissionId
+  commissionId,
+  commission_type,
+  app_fee
 ) => {
   if (!phoneNumber || !amount || !tx_ref || !email) {
     console.error("Missing Required fields");
@@ -51,11 +53,13 @@ export const initialization = async (
       description: `Paying as ${partyType}`,
     },
     // Critical: Send metadata
-    metadata: {
+    meta: {
       commissionId,
       partyType,        // 'client' or 'owner'
       userType,
-      initiatedBy: userType
+      initiatedBy: userType,
+      app_fee,
+      commission_type
     }
     };
 

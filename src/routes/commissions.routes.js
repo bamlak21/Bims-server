@@ -6,6 +6,7 @@ import {
   GetCommissions,
   handleWebhook,
   PayCommission,
+  sendPaymentReminder,
   updateCommissionDecision,
   verifyCommissionPayment,
 } from "../controllers/commission.controller.js";
@@ -302,4 +303,5 @@ router.patch(
   updateCommissionDecision
 );
 router.post("/webhook", handleWebhook);
+router.post("/send-reminder",AuthMiddleWare,sendPaymentReminder);
 export default router;

@@ -22,6 +22,7 @@ const NotificationSchema = new Schema(
         "message",
         "rejection",
         "new_user",
+        "payment_reminder"
       ],
       required: true,
     },
@@ -47,6 +48,7 @@ const NotificationSchema = new Schema(
       enum: ["pending", "accepted", "declined"],
       default: "pending",
     },
+    amount:{type:Number}
   },
   { timestamps: true }
 );

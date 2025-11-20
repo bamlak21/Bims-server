@@ -70,6 +70,7 @@ export const fetchListing = async (req, res) => {
       Model.find(buildFilter(type))
         .populate("owner_id", "firstName lastName")
         .populate("broker_id", "firstName lastName")
+        .populate("verifiedBy","firstName lastName")
         .sort({ created_at: -1 })
         .lean()
         .then((data) =>
@@ -196,17 +197,42 @@ export const getInsights = async (req, res) => {
 
 export const getReports = async (req, res) => {
   try {
+    // Monthly commissions (only paid)
     const monthlyRevenue = await Commission.aggregate([
+      { $match: { status: "paid" } }, // only include paid commissions
       {
         $group: {
-          _id: { $month: "$createdAt" },
-          total: { $sum: "$amount" },
+          _id: { $month: "$createdAt" }, // group by month
+          total: { $sum: "$total_commission" }, // sum of actual commission field
         },
       },
       { $sort: { "_id": 1 } },
     ]);
 
-    res.json({ monthlyRevenue });
+    // Total commissions (only paid)
+    const totalCommissionsData = await Commission.aggregate([
+      { $match: { status: "paid" } },
+      {
+        $group: {
+          _id: null,
+          totalCommissions: { $sum: "$total_commission" },
+        },
+      },
+    ]);
+
+    const totalCommissions = totalCommissionsData.length > 0 ? totalCommissionsData[0].totalCommissions : 0;
+
+    const totalAppfeeData = await Commission.aggregate([
+      { $match: { status: "paid" } },
+      {
+        $group: {
+          _id: null,
+          totalapp_fee: { $sum: "$app_fee" },
+        },
+      },
+    ]);
+  const totalapp_fee = totalAppfeeData.length > 0 ? totalAppfeeData[0].totalapp_fee:0;
+    res.json({ monthlyRevenue, totalCommissions,totalapp_fee });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -215,29 +241,67 @@ export const getReports = async (req, res) => {
 // GET /api/admin/analytics/broker-performance
 export const getBrokerPerformance = async (req, res) => {
   try {
-    const brokers = await User.find({ role: "broker" });
+    const brokers = await User.find({ userType: "broker" });
 
     const performance = await Promise.all(
       brokers.map(async (broker) => {
-        const deals = await Deal.countDocuments({ broker: broker._id, status: "closed" });
+
+        // 🔹 Total deals under this broker (any status except cancelled)
+        const totalDeals = await Deal.countDocuments({
+          broker_id: broker._id,
+          status: { $in: ["active", "negotiating", "agreement", "completed"] }
+        });
+
+        // 🔹 Completed deals for this broker
+        const completedDeals = await Deal.countDocuments({
+          broker_id: broker._id,
+          status: "completed"
+        });
+
+        // 🔹 Total commissions earned
         const commissions = await Commission.aggregate([
-          { $match: { broker: broker._id } },
-          { $group: { _id: null, total: { $sum: "$amount" } } },
+          { $match: { broker_id: broker._id ,
+            status:"paid"
+          } },
+          { $group: { _id: null, total: { $sum: "$total_commission" } } },
         ]);
 
+        const totalCommissions = commissions.length > 0 ? commissions[0].total : 0;
+
+        // 🔹 Calculate success rate
+        const successRate =
+          totalDeals === 0
+            ? 0
+            : Math.round((completedDeals / totalDeals) * 100);
+
         return {
+          brokerId: broker._id,
           broker: `${broker.firstName} ${broker.lastName}`,
-          dealsClosed: deals,
-          totalCommissions: commissions[0]?.total || 0,
+          email: broker.email,
+          totalDeals,
+          completedDeals,
+          totalCommissions,
+          successRate,
+          avgPerDeal: totalDeals === 0 ? 0 : totalCommissions / completedDeals
         };
       })
     );
 
-    res.json(performance);
+    // Sort by earnings (or success rate—your choice)
+    const sorted = performance.sort((a, b) => b.totalCommissions - a.totalCommissions);
+
+    res.json({
+      brokers: sorted,
+      topBroker: sorted[0],
+      top5Brokers: sorted.slice(0, 5),
+    });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
+
 
 export const getUserGrowth = async (req, res) => {
   try {
@@ -459,3 +523,85 @@ export const systemHealth = async (req, res) => {
 }
 
 
+export const fetchPendingListing= async (req, res) => {
+  try {
+    const [properties, vehicles] = await Promise.all([
+      Property.find({ status: "pending" }).populate("owner_id", "firstName lastName"),
+      Vehicle.find({ status: "pending" }).populate("owner_id", "firstName lastName"),
+    ]);
+
+    const combined = [
+      ...properties.map(p => ({ ...p.toObject(), listingType: "Property" })),
+      ...vehicles.map(v => ({ ...v.toObject(), listingType: "Vehicle" })),
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json(combined);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+export const assignBrokerforVerification = async (req, res) => {
+  try {
+    const { brokerId } = req.body;
+
+    if (!brokerId) {
+      return res.status(400).json({ message: "brokerId is required" });
+    }
+
+    const id = req.params.id;
+
+    // Try property first
+    let listing = await Property.findById(id);
+    let modelName = "Property";
+
+    // If not found, try vehicle
+    if (!listing) {
+      listing = await Vehicle.findById(id);
+      modelName = "Vehicle";
+    }
+
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    // Prevent re-assignment
+    if (listing.status === "assigned") {
+      return res.status(400).json({ message: "Already assigned to a broker" });
+    }
+
+    listing.status = "assigned";
+    listing.assignedVerifier = brokerId;
+    listing.assignedAt = new Date();
+
+    await listing.save();
+
+    return res.json({
+      message: "Broker assigned successfully",
+      listing: {
+        id: listing._id,
+        title: listing.title,
+        type: modelName,
+        assignedTo: brokerId,
+      },
+    });
+
+  } catch (error) {
+    console.error("Assign broker error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const fetchAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({
+      userType:'broker',
+      isActive:true,
+      documentVerification:{status:"approved"}
+    }); // Adjust this line as needed
+    res.json(users);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

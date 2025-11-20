@@ -10,6 +10,8 @@ import {
   GetBrokerById,
   GetBrokerAnalytics,
   Delete,
+  sendverificationstatusforadmin,
+  getassignedlistsforbroker,
 } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 import { AuthMiddleWare } from "../middleware/auth.middleware.js";
@@ -407,4 +409,6 @@ router.get("/broker/analytics", GetBrokerAnalytics);
 
 router.get("/brokers/:id", GetBrokerById);
 router.delete("/delete",AuthMiddleWare,Delete);
+router.post("/:id/verify",AuthMiddleWare,sendverificationstatusforadmin);
+router.get("/assigned-to/:brokerId",getassignedlistsforbroker);
 export default router;

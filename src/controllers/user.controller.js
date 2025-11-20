@@ -411,3 +411,76 @@ export const Delete = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 }
+export const getassignedlistsforbroker = async (req, res) => {
+  try {
+    const [properties, vehicles] = await Promise.all([
+      Property.find({ assignedVerifier: req.params.brokerId, status: "assigned" }),
+      Vehicle.find({ assignedVerifier: req.params.brokerId, status: "assigned" }),
+    ]);
+
+    const combined = [
+      ...properties.map(p => ({ ...p.toObject(), listingType: "Property" })),
+      ...vehicles.map(v => ({ ...v.toObject(), listingType: "Vehicle" })),
+    ].sort((a, b) => new Date(b.assignedAt || b.createdAt) - new Date(a.assignedAt || a.createdAt));
+
+    res.json(combined);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+
+export const sendverificationstatusforadmin = async (req, res) => {
+  try {
+    const { decision, comment } = req.body; // "authentic" | "fake"
+    const id = req.params.id;
+
+    let listing = null;
+    let model = null;
+
+    // Try Property first
+    listing = await Property.findById(id);
+    if (listing) {
+      model = "Property";
+    } else {
+      // Try Vehicle
+      listing = await Vehicle.findById(id);
+      if (listing) {
+        model = "Vehicle";
+      }
+    }
+
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    // Ensure assigned broker is the one verifying
+    if (listing.assignedVerifier?.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // Apply verification status
+    if (decision === "authentic") {
+      listing.status = "approved";
+      listing.rejection_reason = "";
+    } else {
+      listing.status = "rejected";
+      listing.rejection_reason = comment || "Failed verification";
+    }
+
+    listing.verifiedBy = req.user.id;
+    listing.verifiedAt = new Date();
+    listing.verificationComment = comment || "";
+
+    await listing.save();
+
+    return res.json({
+      message: "Verification completed",
+      listingType: model,
+      id: listing._id,
+    });
+
+  } catch (err) {
+    console.error("Verification error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

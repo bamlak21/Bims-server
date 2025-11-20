@@ -87,6 +87,12 @@ const CommissionSchema = new Schema({
 }],
 client_paid_at: Date,
 owner_paid_at: Date,
+commission_type: {
+      type: String,
+      enum: ["broker_commission", "system_commission"],
+      required: true,
+    },
+app_fee: { type: Number,default: 0,},
 },{timestamps:true});
 
 export const Commission = model("Commission", CommissionSchema);

@@ -11,7 +11,8 @@ export const CreateNotification = async ({
   link,
   brokerId,
   clientId,
-  status
+  status,
+  amount
 }) => {
   // Validate required IDs
   if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -33,7 +34,8 @@ export const CreateNotification = async ({
       action_required: true,
       broker_id:brokerId,
       client_id:clientId,
-      status
+      status,
+      amount
       
     });
 

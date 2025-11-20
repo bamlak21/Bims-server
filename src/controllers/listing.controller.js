@@ -32,9 +32,10 @@ export const CreateListing = async (req, res) => {
 
   if (!type) return res.status(400).json({ message: "Missing listing type" });
 
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ message: "At least one image is required" });
-  }
+  // Validate images
+if (!req.files || !req.files.images || req.files.images.length === 0) {
+  return res.status(400).json({ message: "At least one image is required" });
+}
 
   if (
     type === "Vehicle" &&
@@ -65,7 +66,11 @@ export const CreateListing = async (req, res) => {
       .json({ message: "Missing required property fields" });
   }
 
-  const imagePaths = req.files.map((file) => file.path.replace(/\\/g, "/"));
+  const imagePaths =
+  req.files?.images?.map((file) => file.path.replace(/\\/g, "/")) || [];
+
+const proofImage =
+  req.files?.proofimages?.map((file) => file.path.replace(/\\/g, "/")) || [];
   // const formattedLocation = location
   //   ? {
   //       city: location.city,
@@ -97,6 +102,7 @@ export const CreateListing = async (req, res) => {
             owner_id,
             status: status || "pending",
             image_paths: imagePaths,
+            proofImage_paths:proofImage,
             needBroker
           })
         : await Property.create({
@@ -109,7 +115,8 @@ export const CreateListing = async (req, res) => {
             image_paths: imagePaths,
             owner_id,
             status: status || "pending",
-            needBroker
+            needBroker,
+            proofImage_paths:proofImage
           });
 
     return res
@@ -163,6 +170,7 @@ export const fetchListing = async (req, res) => {
     const buildFilter = (type) => {
       const filter = {
         _id: { $nin: listingsAssignedToOthers }, // Exclude listings assigned to other clients
+        status:{$in:["approved","sold"]}
       };
       if (minPrice || maxPrice) {
         filter.price = {};
@@ -385,18 +393,26 @@ export const SetListingToBroker = async (req, res) => {
     listing.broker_id = broker_id ? broker_id : null;
     listing.is_broker_assigned = is_broker_assigned ? true : false;
     await listing.save();
-
-    await CreateNotification({
-      userId: listing.owner_id,
-      type: "request",
+    const existingNotification = await Notification.findOne({
       listingId: listing._id,
-      listingType: listing.type,
-      brokerId: broker_id, // add broker reference
-      message: "A broker requested to be assigned to your listing.",
-      link: `/broker-profile/${broker_id}`, // frontend redirect
-      action_required: true,
-      status: "pending",
+      brokerId: broker_id,
+      type: "request",
+      status: "pending", // only block if still pending
     });
+
+    if (!existingNotification) {
+      await CreateNotification({
+        userId: listing.owner_id,
+        type: "request",
+        listingId: listing._id,
+        listingType: listing.type,
+        brokerId: broker_id, // add broker reference
+        message: "A broker requested to be assigned to your listing.",
+        link: `/broker-profile/${broker_id}`, // frontend redirect
+        action_required: true,
+        status: "pending",
+      }); 
+    }
     return res.status(200).json({
       message: "Assignment request sent to the owner",
       listing,
