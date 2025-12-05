@@ -24,6 +24,7 @@
     "nodemon": "^3.1.10",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "twilio": "^5.10.6"
   }
 }

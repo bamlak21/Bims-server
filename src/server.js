@@ -25,7 +25,7 @@ console.log("JWT_SECRET:", process.env.JWT_SECRET);
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: "http://localhost:5173",
+  cors:[ "http://localhost:5173","http://localhost:8081"],
   methods: ["GET", "POST"],
 });
 const swaggerSpec = swaggerJSDoc(swaggerOptions);

@@ -44,7 +44,7 @@ const VehicleSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "assigned", "approved", "rejected", "sold"],
+      enum: ["pending", "assigned","broker_approved","broker_rejected", "approved", "rejected", "sold"],
       required: true,
     },
     rejection_reason: { type: String, default: "" },

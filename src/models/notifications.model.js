@@ -22,7 +22,8 @@ const NotificationSchema = new Schema(
         "message",
         "rejection",
         "new_user",
-        "payment_reminder"
+        "payment_reminder",
+        "Verification_review"
       ],
       required: true,
     },

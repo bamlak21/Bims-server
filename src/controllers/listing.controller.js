@@ -5,6 +5,7 @@ import { CreateNotification } from "../services/notificationService.js";
 import { User } from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import mongoose from "mongoose";
+import { Notifications } from "../models/notifications.model.js";
 
 export const CreateListing = async (req, res) => {
   const {
@@ -390,16 +391,27 @@ export const SetListingToBroker = async (req, res) => {
         .json({ message: "Listing already assigned to another broker" });
     }
 
+    const existingNotification = await Notifications.findOne({
+      listing_id: listing._id,
+      broker_id: broker_id,
+      type: "request",
+      status:"pending"
+      
+    });
+     
+    if (existingNotification) {
+  return res.status(409).json({
+    success:false,
+    message: "Request notification already sent. Please wait for confirmation.",
+  });
+}
+
+    console.log("exist notification",existingNotification);
     listing.broker_id = broker_id ? broker_id : null;
     listing.is_broker_assigned = is_broker_assigned ? true : false;
     await listing.save();
-    const existingNotification = await Notification.findOne({
-      listingId: listing._id,
-      brokerId: broker_id,
-      type: "request",
-      status: "pending", // only block if still pending
-    });
-
+    
+    
     if (!existingNotification) {
       await CreateNotification({
         userId: listing.owner_id,

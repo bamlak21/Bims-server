@@ -37,7 +37,10 @@ export const GetBrokerCommissions = async (req, res) => {
   }
 
   try {
-    const commissions = await Commission.find({ broker_id: id }).lean();
+    const commissions = await Commission.find({ broker_id: id })
+    .populate("listing_id", "title")
+    .populate("owner_id", "firstName lastName email")
+    .populate("client_id", "firstName lastName email").lean();
 
     if (!commissions) {
       return res

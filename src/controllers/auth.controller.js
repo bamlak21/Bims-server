@@ -5,6 +5,7 @@ import { createAdminToken } from "../utils/jwtUtils.js";
 import bcrypt from "bcrypt";
 import { sendOtpemail } from "../utils/OTP.js";
 import { CreateNotification } from "../services/notificationService.js";
+import { sendOtpSMS } from "../utils/SMS-OTP.js";
 
 export const Register = async (req, res) => {
   const { firstName, lastName, email, userType, phoneNumber, password } = req.body;
@@ -333,10 +334,19 @@ export const forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
+    let otp;
+    let method;
     // Generate and send OTP
+    if(email){
     const receiverEmail = user.email;
-    const otp = await sendOtpemail(receiverEmail);
+    otp = await sendOtpemail(receiverEmail);
+    method = 'Email';
+    }
+    else{
+      const receiverPhone = user.phoneNumber
+      otp= await sendOtpSMS(receiverPhone)
+      method = 'SMS';
+    }
 
     // Save OTP and expiry (5 minutes from now)
     user.otp = otp;
@@ -344,7 +354,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     return res.status(200).json({
-      message: "OTP sent to your email",
+      message: `OTP sent to via ${method}`,
       userId: user._id, // send this to frontend for later verification
     });
   } catch (error) {

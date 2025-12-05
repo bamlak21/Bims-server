@@ -70,7 +70,7 @@ export const fetchListing = async (req, res) => {
       Model.find(buildFilter(type))
         .populate("owner_id", "firstName lastName")
         .populate("broker_id", "firstName lastName")
-        .populate("verifiedBy","firstName lastName")
+        .populate("verifiedBy","firstName lastName userType")
         .sort({ created_at: -1 })
         .lean()
         .then((data) =>
@@ -155,7 +155,8 @@ export const getOverview = async (req, res) => {
     const vehicle = await Vehicle.countDocuments();
     const user= await User.find();
     const totalListings = property + vehicle;
-    const totalDeals = await Deal.countDocuments({ status: "closed" });
+    const totalDeals = await Deal.countDocuments()
+    const completedDeals = await Deal.countDocuments({ status: "completed" })
     const totalRevenue = await Commission.aggregate([
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
@@ -165,13 +166,18 @@ export const getOverview = async (req, res) => {
     const approvedproperty = await Property.countDocuments({status:"approved"})
     const approvedvehicle = await Vehicle.countDocuments({status:"approved"})
     const approvedListings = approvedproperty + approvedvehicle
+    const soldProperty = await Property.countDocuments({status:"sold"})
+    const soldVehicle = await Vehicle.countDocuments({status:"sold"})
+    const soldListing = soldProperty + soldVehicle
     res.json({
       totalListings,
       totalDeals,
       totalUsers:user.length,
       totalRevenue: totalRevenue[0]?.total || 0,
       pendingListings,
-      approvedListings
+      approvedListings,
+      soldListing,
+      completedDeals
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -293,7 +299,7 @@ export const getBrokerPerformance = async (req, res) => {
     res.json({
       brokers: sorted,
       topBroker: sorted[0],
-      top5Brokers: sorted.slice(0, 5),
+      top5Brokers: sorted.slice(0, 10),
     });
 
   } catch (err) {
