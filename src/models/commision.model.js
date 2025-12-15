@@ -90,9 +90,16 @@ owner_paid_at: Date,
 commission_type: {
       type: String,
       enum: ["broker_commission", "system_commission"],
-      required: true,
+      required: false,
     },
 app_fee: { type: Number,default: 0,},
+reminders: [
+  {
+    type: { type: String },
+    sentAt: Date,
+    sentBy: { type: Schema.Types.ObjectId, ref: "User" }
+  }
+]
 },{timestamps:true});
 
 export const Commission = model("Commission", CommissionSchema);

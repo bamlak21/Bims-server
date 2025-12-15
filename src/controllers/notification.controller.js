@@ -24,7 +24,11 @@ export const GetNotifications = async (req, res) => {
     populate: {
       path: 'owner_id',
       select: 'firstName lastName photo email phoneNumber'
-    }
+    },
+    populate: {
+      path: 'verifiedBy',
+      select: 'firstName lastName photo email phoneNumber'
+    },
   })
       
     const total = await Notifications.countDocuments(query);

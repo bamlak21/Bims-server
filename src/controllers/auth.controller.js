@@ -42,6 +42,12 @@ export const Register = async (req, res) => {
       return;
     }
 
+    const isValidEmail = (email) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+    if (!isValidEmail(email)) {
+      res.status(405).json({ message: "invalid email format" })
+      return;
+    }
+
     const namePattern = /^[A-Za-z\s]+$/;
     if (!namePattern.test(firstName) || !namePattern.test(lastName)) {
       res.status(405).json({ message: "use proper name" });
@@ -133,7 +139,7 @@ export const Login = async (req, res) => {
     if (!isMatch) {
       return res.status(403).json({ message: "Invalid Credentials" });
     }
-    user.loginLast= new Date()
+    user.loginLast = new Date()
     await user.save();
 
     const token = createToken(user);
@@ -178,7 +184,7 @@ export const AdminLogin = async (req, res) => {
     return res.status(200).json({
       message: "admin logged in",
       email: admin.email,
-      name:admin.name,
+      name: admin.name,
       token: token,
     });
   } catch (error) {
@@ -288,9 +294,9 @@ export const verifyUser = async (req, res) => {
       userId: updatedUser._id,
       type: "approved_account",
       message: verified
-    ? "Your account verified successfully."
-    : "Your account verification has been rejected.",
-      status:verified?"accepted":"declined"
+        ? "Your account verified successfully."
+        : "Your account verification has been rejected.",
+      status: verified ? "accepted" : "declined"
     });
 
     return res.status(200).json(updatedUser);
@@ -329,22 +335,30 @@ export const forgotPassword = async (req, res) => {
   const { email, phoneNumber } = req.body;
 
   try {
-    // Find user by email or phone
-    const user = await User.findOne(email ? { email } : { phoneNumber });
+    let user = await User.findOne(email ? { email } : { phoneNumber });
+    let isUser = true;
+
+    // If no user found, check if it's an admin (email only)
+    if (!user && email) {
+      user = await Admin.findOne({ email });
+      isUser = false;
+    }
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
     let otp;
     let method;
+
     // Generate and send OTP
-    if(email){
-    const receiverEmail = user.email;
-    otp = await sendOtpemail(receiverEmail);
-    method = 'Email';
-    }
-    else{
-      const receiverPhone = user.phoneNumber
-      otp= await sendOtpSMS(receiverPhone)
+    if (email) {
+      const receiverEmail = user.email;
+      otp = await sendOtpemail(receiverEmail);
+      method = 'Email';
+    } else {
+      const receiverPhone = user.phoneNumber;
+      otp = await sendOtpSMS(receiverPhone);
       method = 'SMS';
     }
 
@@ -355,7 +369,8 @@ export const forgotPassword = async (req, res) => {
 
     return res.status(200).json({
       message: `OTP sent to via ${method}`,
-      userId: user._id, // send this to frontend for later verification
+      userId: user._id,
+      userType: isUser ? 'user' : 'admin'
     });
   } catch (error) {
     console.error("Error in forgot password:", error);
@@ -370,7 +385,15 @@ export const verifyOtp = async (req, res) => {
   }
 
   try {
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+    let isAdmin = false;
+
+    // If not found in User, check Admin
+    if (!user) {
+      user = await Admin.findById(userId);
+      isAdmin = true;
+    }
+
     if (!user || !user.otp || !user.otpExpiry) {
       return res.status(404).json({ message: "OTP not requested or expired" });
     }
@@ -383,11 +406,22 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP expired" });
     }
 
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
     // Update password & clear OTP
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.otp = undefined;
-    user.otpExpiry = undefined;
-    await user.save();
+    if (isAdmin) {
+      // Explicitly update Admin
+      await Admin.findByIdAndUpdate(userId, {
+        password: hashedPassword,
+        $unset: { otp: 1, otpExpiry: 1 }
+      });
+    } else {
+      // Explicitly update User
+      user.password = hashedPassword;
+      user.otp = undefined;
+      user.otpExpiry = undefined;
+      await user.save();
+    }
 
     return res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {

@@ -4,9 +4,10 @@ import { initialization, verify } from "../utils/chapa.js";
 import { randomUUID } from "crypto";
 import { User } from "../models/user.model.js";
 import { Deal } from "../models/deals.model.js";
-import {CreateNotification} from '../services/notificationService.js'
+import { CreateNotification } from '../services/notificationService.js'
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
+import { Admin } from "../models/admin.model.js";
 
 export const GetCommissions = async (req, res) => {
   try {
@@ -38,9 +39,9 @@ export const GetBrokerCommissions = async (req, res) => {
 
   try {
     const commissions = await Commission.find({ broker_id: id })
-    .populate("listing_id", "title")
-    .populate("owner_id", "firstName lastName email")
-    .populate("client_id", "firstName lastName email").lean();
+      .populate("listing_id", "title")
+      .populate("owner_id", "firstName lastName email")
+      .populate("client_id", "firstName lastName email").lean();
 
     if (!commissions) {
       return res
@@ -186,7 +187,7 @@ export const updateCommissionDecision = async (req, res) => {
 };
 
 export const PayCommission = async (req, res) => {
-  const { amount, commissionId, user_id,partyType } = req.body;
+  const { amount, commissionId, user_id, partyType } = req.body;
 
   if (!amount || !commissionId || !user_id) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -287,7 +288,7 @@ export const verifyCommissionPayment = async (req, res) => {
 //   if (status !== 200) {
 //     return res.status(400).json({ message: "payment failed" ,payload});
 //   }
-  
+
 // try{
 // const commissions = await Commission.findOne({tx_ref:tx_ref});
 
@@ -356,23 +357,24 @@ export const handleWebhook = async (req, res) => {
 
       // Now correctly find and update the Deal
       const deal = await Deal.findOneAndUpdate(
-        { commission_id: commission._id }, 
-        { status: 'completed',
+        { commission_id: commission._id },
+        {
+          status: 'completed',
           app_fee: appFee,
-         commission_type: commissionType,
-         },
+          commission_type: commissionType,
+        },
         { new: true },
       );
-       const listingId = commission.listing_id;
-       const model = commission.listing_type ==='Property'? Property:Vehicle; 
-       await model.findOneAndUpdate({
-        _id:listingId
-       },{
-        status:"sold"
-       },{new:true})
-       const updatedListing = await model.findById(listingId);
-       console.log("Listing after update:", updatedListing.status);
-       console.log("Updating listing:", listingId);
+      const listingId = commission.listing_id;
+      const model = commission.listing_type === 'Property' ? Property : Vehicle;
+      await model.findOneAndUpdate({
+        _id: listingId
+      }, {
+        status: "sold"
+      }, { new: true })
+      const updatedListing = await model.findById(listingId);
+      console.log("Listing after update:", updatedListing.status);
+      console.log("Updating listing:", listingId);
       if (!deal) console.log("Deal not found for commission:", commission._id);
       else console.log("Deal completed:", deal._id);
     } else {
@@ -397,13 +399,14 @@ export const handleWebhook = async (req, res) => {
   }
 };
 export const sendPaymentReminder = async (req, res) => {
- 
+
   try {
     const { commissionId, type } = req.body; // 'client' or 'owner'
-    
+
     // FIX 1: Use _id, not .id
     const brokerId = req.user?.id?.toString();
-    if (!brokerId) {
+    const adminId = req.user?.id?.toString();
+    if (!brokerId && !adminId) {
       return res.status(401).json({ message: "Unauthorized: Invalid user" });
     }
 
@@ -413,9 +416,10 @@ export const sendPaymentReminder = async (req, res) => {
     if (!commission) {
       return res.status(404).json({ message: "Commission not found" });
     }
-
+    const admin = await Admin.findById(adminId)
+    const isAdmin = !!admin;
     // FIX 2: Compare using _id
-    if (commission.broker_id?._id?.toString() !== brokerId) {
+    if (commission.broker_id?._id?.toString() !== brokerId && !isAdmin) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
@@ -441,15 +445,34 @@ export const sendPaymentReminder = async (req, res) => {
       return res.status(400).json({ message: "Listing data incomplete" });
     }
 
-    const amount = type === 'client'? commission.client_share:commission.owner_share
+    const now = new Date();
+    const isOverdue = commission.status !== "paid" && commission.due_date && new Date(commission.due_date) < now;
+
+    const amount = type === 'client' ? commission.client_share : commission.owner_share
     const listingTitle = listing.title;
 
-    const message = `Your commission payment of ETB ${amount} for "${listingTitle}" is still pending. Please complete payment as soon as possible. Thank you!`;
+    let message;
+    let messageType = 'payment_reminder';
+
+    if (isAdmin) {
+      // Admin Logic: Final Warning
+      // Only Admin sends the "Final Notice"/Warning
+      message = req.body.message || `FINAL NOTICE: Your commission payment of ETB ${amount} for "${listingTitle}" is overdue. This is a final warning. Please complete the payment immediately to avoid account restrictions.`;
+    } else {
+      // Broker Logic: Reminder vs Overdue Reminder
+      if (isOverdue) {
+        // Overdue but from Broker (so friendly but firm)
+        message = `Payment Overdue: Your commission payment of ETB ${amount} for "${listingTitle}" was due on ${new Date(commission.due_date).toLocaleDateString()}. Please make the payment soon.`;
+      } else {
+        // Standard Reminder (Before Due Date)
+        message = `Your commission payment of ETB ${amount} for "${listingTitle}" is still pending. Please complete payment as soon as possible. Thank you!`;
+      }
+    }
 
     // Create Notification
     await CreateNotification({
       userId: recipientId,
-      type: "payment_reminder",
+      type: messageType, // Can stay generic 'payment_reminder' or be specific if frontend supports it
       listingId: listing._id,
       listingType: listing.type, // Property or Vehicle
       message,
@@ -459,15 +482,16 @@ export const sendPaymentReminder = async (req, res) => {
       clientId: type === "client" ? recipientId : null,
       status: "pending",
       amount: amount,
+      overdue: isOverdue
     });
 
     // Log reminder
-    // commission.reminders = commission.reminders || [];
-    // commission.reminders.push({
-    //   type,
-    //   sentAt: new Date(),
-    //   sentBy: brokerId
-    // });
+    commission.reminders = commission.reminders || [];
+    commission.reminders.push({
+      type,
+      sentAt: new Date(),
+      sentBy: brokerId
+    });
     await commission.save();
 
     return res.json({

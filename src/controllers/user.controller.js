@@ -478,9 +478,9 @@ export const sendverificationstatusforadmin = async (req, res) => {
       await CreateNotification({
         userId: admin._id,
         type: "Verification_review",
-        listing_id: listing._id,
-        listing_type: listing.type,
-        message: comment,
+        listingId: listing._id,
+        listingType: listing.type,
+        message: comment || "Listing has been verified and approved by broker",
         status: "accepted"
       });
 

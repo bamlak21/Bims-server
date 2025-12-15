@@ -3,7 +3,7 @@ import ChatRoom from "../models/chat.model.js";
 import Message from "../models/message.model.js";
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
-import { onlineUsers } from "../Socket/socketManager.js"; 
+import { onlineUsers } from "../Socket/socketManager.js";
 import { Deal } from "../models/deals.model.js";
 import { User } from "../models/user.model.js";
 
@@ -24,11 +24,18 @@ export const GetChatRooms = async (req, res) => {
           createdAt: -1,
         });
 
+        const unreadCount = await Message.countDocuments({
+          roomId: room._id,
+          status: { $ne: "read" },
+          senderId: { $ne: userId },
+        });
+
         return {
           name: room.name,
           roomId: room._id,
           participants: room.participants,
           lastMessage: lastMessage || null,
+          unreadCount: unreadCount || 0,
         };
       })
     );
@@ -43,16 +50,16 @@ export const GetChatRooms = async (req, res) => {
 export const GetMessagesForChat = async (req, res) => {
   const { roomId } = req.params;
   console.log(roomId);
-  
-const isValidObjectId = mongoose.Types.ObjectId.isValid(roomId);
-if (!isValidObjectId) {
-  return res.status(400).json({ message: 'Invalid roomId' });
-}
+
+  const isValidObjectId = mongoose.Types.ObjectId.isValid(roomId);
+  if (!isValidObjectId) {
+    return res.status(400).json({ message: 'Invalid roomId' });
+  }
   if (!roomId) {
     return res.status(400).json({ message: "Missing required fields" });
   }
   try {
-    const messages = await Message.find({ roomId: roomId }).populate("senderId","userType photo");
+    const messages = await Message.find({ roomId: roomId }).populate("senderId", "userType photo");
     return res.status(200).json({ message: "Success", messages });
   } catch (error) {
     console.error("Failed to fetch messages for chat room: ", error);

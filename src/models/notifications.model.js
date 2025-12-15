@@ -49,7 +49,8 @@ const NotificationSchema = new Schema(
       enum: ["pending", "accepted", "declined"],
       default: "pending",
     },
-    amount:{type:Number}
+    amount:{type:Number},
+    overdue: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

@@ -2,8 +2,8 @@ import { Deal } from "../models/deals.model.js";
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { CreateNotification } from "../services/notificationService.js";
-import {Commission} from "../models/commision.model.js";
-import {User} from "../models/user.model.js";
+import { Commission } from "../models/commision.model.js";
+import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 import { getMetrics } from "../utils/metric.js";
 
@@ -12,7 +12,7 @@ export const fetchListing = async (req, res) => {
     const {
       type = "all",
       page = 1,
-      limit = 10,
+      limit = 20,
       minPrice,
       maxPrice,
       category,
@@ -58,7 +58,7 @@ export const fetchListing = async (req, res) => {
           { "location.subcity": regex },
         ];
       }
-  
+
       return filter;
     };
 
@@ -70,7 +70,7 @@ export const fetchListing = async (req, res) => {
       Model.find(buildFilter(type))
         .populate("owner_id", "firstName lastName")
         .populate("broker_id", "firstName lastName")
-        .populate("verifiedBy","firstName lastName userType")
+        .populate("verifiedBy", "firstName lastName userType")
         .sort({ created_at: -1 })
         .lean()
         .then((data) =>
@@ -131,17 +131,17 @@ export const RejectListing = async (req, res) => {
     listing.rejection_reason = reason;
     listing.status = "rejected";
     await listing.save();
-     await CreateNotification({
-          userId: listing.owner_id,
-          type: listing.status === "rejected" ? "rejection" : "approved",
-          listing_id: listing._id,
-          listing_type: listing.type,
-          message:
-            listing.status === "rejected"
-              ? listing.rejection_reason
-              : "Your listing have been approved",
-          status:"declined"
-        });
+    await CreateNotification({
+      userId: listing.owner_id,
+      type: listing.status === "rejected" ? "rejection" : "approved",
+      listingId: listing._id,
+      listingType: listing.type,
+      message:
+        listing.status === "rejected"
+          ? listing.rejection_reason
+          : "Your listing have been approved",
+      status: "declined"
+    });
     return res.status(200).json({ message: "Listing rejected" });
   } catch (err) {
     console.log(err);
@@ -153,26 +153,26 @@ export const getOverview = async (req, res) => {
   try {
     const property = await Property.countDocuments();
     const vehicle = await Vehicle.countDocuments();
-    const user= await User.find();
+    const user = await User.find();
     const totalListings = property + vehicle;
     const totalDeals = await Deal.countDocuments()
     const completedDeals = await Deal.countDocuments({ status: "completed" })
     const totalRevenue = await Commission.aggregate([
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-    const pendingproperty = await Property.countDocuments({status:"pending"})
-    const pendingvehicle = await Vehicle.countDocuments({status:"pending"})
-    const pendingListings = pendingproperty+pendingvehicle
-    const approvedproperty = await Property.countDocuments({status:"approved"})
-    const approvedvehicle = await Vehicle.countDocuments({status:"approved"})
+    const pendingproperty = await Property.countDocuments({ status: "pending" })
+    const pendingvehicle = await Vehicle.countDocuments({ status: "pending" })
+    const pendingListings = pendingproperty + pendingvehicle
+    const approvedproperty = await Property.countDocuments({ status: "approved" })
+    const approvedvehicle = await Vehicle.countDocuments({ status: "approved" })
     const approvedListings = approvedproperty + approvedvehicle
-    const soldProperty = await Property.countDocuments({status:"sold"})
-    const soldVehicle = await Vehicle.countDocuments({status:"sold"})
+    const soldProperty = await Property.countDocuments({ status: "sold" })
+    const soldVehicle = await Vehicle.countDocuments({ status: "sold" })
     const soldListing = soldProperty + soldVehicle
     res.json({
       totalListings,
       totalDeals,
-      totalUsers:user.length,
+      totalUsers: user.length,
       totalRevenue: totalRevenue[0]?.total || 0,
       pendingListings,
       approvedListings,
@@ -237,8 +237,8 @@ export const getReports = async (req, res) => {
         },
       },
     ]);
-  const totalapp_fee = totalAppfeeData.length > 0 ? totalAppfeeData[0].totalapp_fee:0;
-    res.json({ monthlyRevenue, totalCommissions,totalapp_fee });
+    const totalapp_fee = totalAppfeeData.length > 0 ? totalAppfeeData[0].totalapp_fee : 0;
+    res.json({ monthlyRevenue, totalCommissions, totalapp_fee });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -266,9 +266,12 @@ export const getBrokerPerformance = async (req, res) => {
 
         // 🔹 Total commissions earned
         const commissions = await Commission.aggregate([
-          { $match: { broker_id: broker._id ,
-            status:"paid"
-          } },
+          {
+            $match: {
+              broker_id: broker._id,
+              status: "paid"
+            }
+          },
           { $group: { _id: null, total: { $sum: "$total_commission" } } },
         ]);
 
@@ -313,7 +316,7 @@ export const getUserGrowth = async (req, res) => {
   try {
     const period = parseInt(req.query.period) || 365; // Default to 1 year if no period
     const startDate = new Date(Date.now() - period * 24 * 60 * 60 * 1000);
-    
+
     // For periods < 30 days, use daily grouping; otherwise monthly
     const isDaily = period < 30;
     const groupBy = isDaily ? { day: { $dayOfMonth: "$createdAt" }, month: { $month: "$createdAt" }, year: { $year: "$createdAt" } } : { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } };
@@ -322,7 +325,7 @@ export const getUserGrowth = async (req, res) => {
       {
         $match: {
           createdAt: { $gte: startDate },
-          userType: { $in: ['client', 'broker','owner'] } // Exclude admins
+          userType: { $in: ['client', 'broker', 'owner'] } // Exclude admins
         }
       },
       {
@@ -335,7 +338,7 @@ export const getUserGrowth = async (req, res) => {
             $sum: { $cond: [{ $eq: ["$userType", "client"] }, 1, 0] }
           },
           owners: {
-            $sum: { $cond: [{ $eq: ["$userType", "owner"] }, 1, 0] } 
+            $sum: { $cond: [{ $eq: ["$userType", "owner"] }, 1, 0] }
           },
           totalUsers: { $sum: 1 }
         }
@@ -346,13 +349,17 @@ export const getUserGrowth = async (req, res) => {
       {
         $project: {
           _id: 0,
-          month: isDaily 
-            ? { $concat: [
+          month: isDaily
+            ? {
+              $concat: [
                 { $toString: "$_id.day" }, "/", { $toString: "$_id.month" }, "/", { $toString: "$_id.year" }
-              ] }
-            : { $concat: [
+              ]
+            }
+            : {
+              $concat: [
                 { $toString: "$_id.month" }, "/", { $toString: "$_id.year" }
-              ] },
+              ]
+            },
           totalUsers: 1,
           brokers: 1,
           clients: 1,
@@ -392,14 +399,14 @@ export const getListingGrowth = async (req, res) => {
 
     const groupBy = isDaily
       ? {
-          day: { $dayOfMonth: "$createdAt" },
-          month: { $month: "$createdAt" },
-          year: { $year: "$createdAt" },
-        }
+        day: { $dayOfMonth: "$createdAt" },
+        month: { $month: "$createdAt" },
+        year: { $year: "$createdAt" },
+      }
       : {
-          month: { $month: "$createdAt" },
-          year: { $year: "$createdAt" },
-        };
+        month: { $month: "$createdAt" },
+        year: { $year: "$createdAt" },
+      };
 
     // Aggregate pipeline to be reused for both models
     const getGrowthPipeline = (Model, typeLabel) => [
@@ -490,13 +497,13 @@ export const getListingGrowth = async (req, res) => {
 
 let serverStartTime = Date.now()
 export const systemHealth = async (req, res) => {
- 
-  const getSuccessRate = () => {
-  if (totalRequests === 0) return 100; // Assume perfect if no traffic
-  return ((successfulRequests / totalRequests) * 100).toFixed(2);
-};
 
-  
+  const getSuccessRate = () => {
+    if (totalRequests === 0) return 100; // Assume perfect if no traffic
+    return ((successfulRequests / totalRequests) * 100).toFixed(2);
+  };
+
+
   try {
     // Uptime in seconds
     const uptime = ((Date.now() - serverStartTime) / 1000).toFixed(0);
@@ -512,15 +519,15 @@ export const systemHealth = async (req, res) => {
       isActive: true,
       loginLast: { $gte: activeSince },
     });
-   
-     const { successRate, errorRate,totalRequests } = getMetrics();
+
+    const { successRate, errorRate, totalRequests } = getMetrics();
     res.json({
       uptime: Number(uptime),  // in seconds
       responseTime, // in ms                      
       activeUsers,
       successRate,
       errorRate,
-      totalRequests                     
+      totalRequests
     });
   } catch (err) {
     console.error("System health check failed:", err);
@@ -529,7 +536,7 @@ export const systemHealth = async (req, res) => {
 }
 
 
-export const fetchPendingListing= async (req, res) => {
+export const fetchPendingListing = async (req, res) => {
   try {
     const [properties, vehicles] = await Promise.all([
       Property.find({ status: "pending" }).populate("owner_id", "firstName lastName"),
@@ -601,9 +608,9 @@ export const assignBrokerforVerification = async (req, res) => {
 export const fetchAllUsers = async (req, res) => {
   try {
     const users = await User.find({
-      userType:'broker',
-      isActive:true,
-      documentVerification:{status:"approved"}
+      userType: 'broker',
+      isActive: true,
+      documentVerification: { status: "approved" }
     }); // Adjust this line as needed
     res.json(users);
   } catch (err) {

@@ -34,9 +34,9 @@ export const CreateListing = async (req, res) => {
   if (!type) return res.status(400).json({ message: "Missing listing type" });
 
   // Validate images
-if (!req.files || !req.files.images || req.files.images.length === 0) {
-  return res.status(400).json({ message: "At least one image is required" });
-}
+  if (!req.files || !req.files.images || req.files.images.length === 0) {
+    return res.status(400).json({ message: "At least one image is required" });
+  }
 
   if (
     type === "Vehicle" &&
@@ -46,7 +46,7 @@ if (!req.files || !req.files.images || req.files.images.length === 0) {
       !price ||
       !vehicleSpecs ||
       !owner_id ||
-      !status||!needBroker)
+      !status || !needBroker)
   ) {
     return res.status(400).json({ message: "Missing required vehicle fields" });
   }
@@ -60,7 +60,7 @@ if (!req.files || !req.files.images || req.files.images.length === 0) {
       !specifications ||
       !owner_id ||
       !status ||
-      !location||!needBroker)
+      !location || !needBroker)
   ) {
     return res
       .status(400)
@@ -68,10 +68,10 @@ if (!req.files || !req.files.images || req.files.images.length === 0) {
   }
 
   const imagePaths =
-  req.files?.images?.map((file) => file.path.replace(/\\/g, "/")) || [];
+    req.files?.images?.map((file) => file.path.replace(/\\/g, "/")) || [];
 
-const proofImage =
-  req.files?.proofimages?.map((file) => file.path.replace(/\\/g, "/")) || [];
+  const proofImage =
+    req.files?.proofimages?.map((file) => file.path.replace(/\\/g, "/")) || [];
   // const formattedLocation = location
   //   ? {
   //       city: location.city,
@@ -95,30 +95,30 @@ const proofImage =
     const listing =
       type === "Vehicle"
         ? await Vehicle.create({
-            title,
-            description,
-            category,
-            price,
-            vehicleSpecs: parsedVehicleSpecs,
-            owner_id,
-            status: status || "pending",
-            image_paths: imagePaths,
-            proofImage_paths:proofImage,
-            needBroker
-          })
+          title,
+          description,
+          category,
+          price,
+          vehicleSpecs: parsedVehicleSpecs,
+          owner_id,
+          status: status || "pending",
+          image_paths: imagePaths,
+          proofImage_paths: proofImage,
+          needBroker
+        })
         : await Property.create({
-            title,
-            description,
-            category,
-            price,
-            location: parsedLocation,
-            specifications: parsedSpecifications,
-            image_paths: imagePaths,
-            owner_id,
-            status: status || "pending",
-            needBroker,
-            proofImage_paths:proofImage
-          });
+          title,
+          description,
+          category,
+          price,
+          location: parsedLocation,
+          specifications: parsedSpecifications,
+          image_paths: imagePaths,
+          owner_id,
+          status: status || "pending",
+          needBroker,
+          proofImage_paths: proofImage
+        });
 
     return res
       .status(201)
@@ -144,11 +144,11 @@ export const fetchListing = async (req, res) => {
 
     const userId = req.user?._id || req.user?.id; // Current logged-in user
     const skip = (page - 1) * limit;
-    const userType = req.user?.userType; 
+    const userType = req.user?.userType;
 
     if (userType === "broker") {
       req.query.needBroker = "Yes"; // brokers only see listings that need brokers
-      }
+    }
 
 
     // Fetch deals assigned to the current user
@@ -171,7 +171,7 @@ export const fetchListing = async (req, res) => {
     const buildFilter = (type) => {
       const filter = {
         _id: { $nin: listingsAssignedToOthers }, // Exclude listings assigned to other clients
-        status:{$in:["approved","sold"]}
+        status: { $in: ["approved", "sold"] }
       };
       if (minPrice || maxPrice) {
         filter.price = {};
@@ -187,25 +187,25 @@ export const fetchListing = async (req, res) => {
           { "location.subcity": regex },
         ];
       }
-    if (userType === "broker") {
-    filter.needBroker = "Yes";
-  } else {
-    // client – keep the $or we may have added for search
-    const clientOr = [
-      { needBroker: "No" },
-      { needBroker: "Yes", is_broker_assigned: true },
-    ];
-    if (filter.$or) {
-      // merge search $or with client $or
-      filter.$and = [
-        { $or: filter.$or },
-        { $or: clientOr },
-      ];
-      delete filter.$or;
-    } else {
-      filter.$or = clientOr;
-    }
-  }
+      if (userType === "broker") {
+        filter.needBroker = "Yes";
+      } else {
+        // client – keep the $or we may have added for search
+        const clientOr = [
+          { needBroker: "No" },
+          { needBroker: "Yes", is_broker_assigned: true },
+        ];
+        if (filter.$or) {
+          // merge search $or with client $or
+          filter.$and = [
+            { $or: filter.$or },
+            { $or: clientOr },
+          ];
+          delete filter.$or;
+        } else {
+          filter.$or = clientOr;
+        }
+      }
       return filter;
     };
 
@@ -304,34 +304,34 @@ export const verifyListing = async (req, res) => {
     await CreateNotification({
       userId: listing.owner_id,
       type: "approved",
-      listing_id: listing._id,
-      listing_type: listing.type,
+      listingId: listing._id,
+      listingType: listing.type,
       message: "Your listing have been approved",
-      status:"accepted"
+      status: "accepted"
     });
     const existingDeal = await Deal.findOne({
       listing_id: listing._id,
       listing_type: type,
     });
-       if (!existingDeal) {
+    if (!existingDeal) {
       await Deal.create({
-  listing_id: listing._id,
-  owner_id: listing.owner_id,
-  broker_id:null,
-  title: listing.title,
-  listing_type: type,
-  status: 'active',
-  listing_snapshot: {
-    title: listing.title,
-    description: listing.description,
-    price: listing.price,
-    location: listing.location,
-    images: listing.image_paths || listing.images || [],
-  },
-});
+        listing_id: listing._id,
+        owner_id: listing.owner_id,
+        broker_id: null,
+        title: listing.title,
+        listing_type: type,
+        status: 'active',
+        listing_snapshot: {
+          title: listing.title,
+          description: listing.description,
+          price: listing.price,
+          location: listing.location,
+          images: listing.image_paths || listing.images || [],
+        },
+      });
     }
-    else{
-      res.status(200).json({message:"deal already created"})
+    else {
+      res.status(200).json({ message: "deal already created" })
     }
 
     return res.status(200).json({
@@ -395,23 +395,23 @@ export const SetListingToBroker = async (req, res) => {
       listing_id: listing._id,
       broker_id: broker_id,
       type: "request",
-      status:"pending"
-      
-    });
-     
-    if (existingNotification) {
-  return res.status(409).json({
-    success:false,
-    message: "Request notification already sent. Please wait for confirmation.",
-  });
-}
+      status: "pending"
 
-    console.log("exist notification",existingNotification);
+    });
+
+    if (existingNotification) {
+      return res.status(409).json({
+        success: false,
+        message: "Request notification already sent. Please wait for confirmation.",
+      });
+    }
+
+    console.log("exist notification", existingNotification);
     listing.broker_id = broker_id ? broker_id : null;
     listing.is_broker_assigned = is_broker_assigned ? true : false;
     await listing.save();
-    
-    
+
+
     if (!existingNotification) {
       await CreateNotification({
         userId: listing.owner_id,
@@ -423,7 +423,7 @@ export const SetListingToBroker = async (req, res) => {
         link: `/broker-profile/${broker_id}`, // frontend redirect
         action_required: true,
         status: "pending",
-      }); 
+      });
     }
     return res.status(200).json({
       message: "Assignment request sent to the owner",
@@ -497,21 +497,21 @@ export const getAssignedListings = async (req, res) => {
     // Search logic — we'll add it below using regex
     const searchQuery = search
       ? {
-          $or: [
-            { title: { $regex: search, $options: "i" } },
-            { "location.city": { $regex: search, $options: "i" } },
-            { "location.subcity": { $regex: search, $options: "i" } },
-          ],
-        }
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { "location.city": { $regex: search, $options: "i" } },
+          { "location.subcity": { $regex: search, $options: "i" } },
+        ],
+      }
       : {};
 
     // Handle 'all' type (fetch from both Vehicle and Property models)
     if (type.toLowerCase() === "all") {
       const [vehicles, properties] = await Promise.all([
         Vehicle.find({ ...filters, ...searchQuery })
-        .populate("broker_id","firstName lastName"),
+          .populate("broker_id", "firstName lastName"),
         Property.find({ ...filters, ...searchQuery })
-        .populate("broker_id","firstName lastName"),
+          .populate("broker_id", "firstName lastName"),
       ]);
 
       const allListings = [...vehicles, ...properties].sort(
@@ -538,7 +538,7 @@ export const getAssignedListings = async (req, res) => {
   }
 };
 export const AssignClientToDeal = async (req, res) => {
-  const { listingId, broker_id, client_id, listingType,title } = req.body;
+  const { listingId, broker_id, client_id, listingType, title } = req.body;
 
   // Required fields
   if (!listingId || !client_id || !listingType) {
@@ -561,7 +561,7 @@ export const AssignClientToDeal = async (req, res) => {
     const needBroker = listing.needBroker === true || listing.needBroker === "Yes";
 
     // CASE 1: No Broker Needed (needBroker === "No" or false)
-    
+
     if (!needBroker) {
       // Find existing deal (any kind: broker or no broker)
       let deal = await Deal.findOne({ listing_id: listingId });
@@ -606,9 +606,9 @@ export const AssignClientToDeal = async (req, res) => {
         .json({ message: "Direct contact established", deal });
     }
 
-    
+
     // CASE 2: Broker Required (needBroker === true/"Yes")
-  
+
     if (!broker_id) {
       return res
         .status(400)
@@ -627,26 +627,26 @@ export const AssignClientToDeal = async (req, res) => {
     if (deal.client_id && deal.client_id.toString() !== client_id) {
       return res
         .status(400)
-        // .json({ message: "Deal already assigned to another client" });
+      // .json({ message: "Deal already assigned to another client" });
     }
     if (deal.client_id && deal.client_id.toString() === client_id) {
-  return res.status(200).json({ message: "Client already assigned", deal });
-}
+      return res.status(200).json({ message: "Client already assigned", deal });
+    }
 
     // Assign client
     deal.client_id = client_id;
     deal.status = "negotiating";
     await deal.save();
 
-    
+
     await CreateNotification({
       userId: deal.broker_id,
       type: "client_assigned",
       listingId: listingId,
       listingType: deal.listing_type,
       message: "A client contacted you about this deal.",
-      clientId:client_id,
-      status:"accepted"
+      clientId: client_id,
+      status: "accepted"
     });
 
     await CreateNotification({
@@ -655,8 +655,8 @@ export const AssignClientToDeal = async (req, res) => {
       listingId: listingId,
       listingType: deal.listing_type,
       message: "A client is now in contact about your listing.",
-      clientId:client_id,
-      status:"accepted"
+      clientId: client_id,
+      status: "accepted"
     });
 
     return res.status(200).json({

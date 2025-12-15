@@ -30,7 +30,8 @@ export const CreateCommission = async ({
     client_share = total_commission / 2;
     app_fee = client_share + owner_share;
   }
-  ;
+  const due_date = new Date();
+  due_date.setDate(due_date.getDate() + 3);
 
   const commission = await Commission.create({
     broker_id,
@@ -43,7 +44,8 @@ export const CreateCommission = async ({
     owner_share,
     client_share,
     app_fee,
-    commission_type
+    commission_type,
+    due_date
   });
 
   return commission.toObject();
