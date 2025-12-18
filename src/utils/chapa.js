@@ -35,32 +35,35 @@ export const initialization = async (
   }
   const url = "https://api.chapa.co/v1/transaction/initialize";
   try {
-    // const currentUrl = window.location.href;
+    // Build a return_url that already contains both commission_id and tx_ref.
+    // This prevents the provider from appending another `?` and producing a malformed querystring.
+    const returnUrlBase = process.env.RETURN_URL_BASE || "http://localhost:5173/verify-payment";
+    const return_url = `${returnUrlBase}?commission_id=${encodeURIComponent(commissionId)}&tx_ref=${encodeURIComponent(tx_ref)}`;
+
     const reqBody = {
       first_name: firstName || "",
       last_name: lastName || "",
       email,
-      user_type:userType||"",
+      user_type: userType || "",
       phone_number: phoneNumber,
       amount: amount,
       tx_ref: tx_ref,
       currency: "ETB",
-      // callback_url: `https://c2bf9b560d0a.ngrok-free.app/api/commissions/webhook`,
-      callback_url:`https://convivial-theressa-discordantly.ngrok-free.dev/api/commissions/webhook`,
-      // return_url: `http://localhost:5173/verify-payment`,
+      callback_url: process.env.CALLBACK_URL || `https://convivial-theressa-discordantly.ngrok-free.dev/api/commissions/webhook`,
+      return_url,
       customization: {
-      title: "BIMS Payment",
-      description: `Paying as ${partyType}`,
-    },
-    // Critical: Send metadata
-    meta: {
-      commissionId,
-      partyType,        // 'client' or 'owner'
-      userType,
-      initiatedBy: userType,
-      app_fee,
-      commission_type
-    }
+        title: "BIMS Payment",
+        description: `Paying as ${partyType}`,
+      },
+      // Critical: Send metadata
+      meta: {
+        commissionId,
+        partyType,        // 'client' or 'owner'
+        userType,
+        initiatedBy: userType,
+        app_fee,
+        commission_type
+      }
     };
 
     opt.url = url;
@@ -69,7 +72,6 @@ export const initialization = async (
       headers: opt.headers,
     });
 
-    // console.log(res);
     console.log(res.data);
 
     return {
@@ -96,9 +98,16 @@ export const verify = async (tx_ref) => {
     const res = await axios.get(`${url}/${tx_ref}`, {
       headers: opt.headers,
     });
+    console.log("Chapa Verify Response:", JSON.stringify(res.data, null, 2));
 
-    return res.status;
+    // Return the full data or specifically the status string
+    // Chapa structure: { status: 'success', message: '...', data: { status: 'success', ... } }
+    return res.data;
   } catch (error) {
     console.error("Failed to verify transaction", error.message);
+    if (error.response) {
+      console.error("Chapa Error Response:", error.response.data);
+    }
+    return null;
   }
 };

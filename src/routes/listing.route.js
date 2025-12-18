@@ -321,6 +321,7 @@ router.get("/fetchlistcount/:id", fetchListingCount);
  *                   example: Internal Server Error
  */
 router.get("/fetch",AuthMiddleWare ,fetchListing);
+router.get("/fetch-demo",fetchListing);
 
 /**
  * @swagger

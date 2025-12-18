@@ -42,17 +42,17 @@ const CommissionSchema = new Schema({
     required: true,
   },
   status: {
-  type: String,
-  enum: [
-    "pending",
-    "awaiting_payment",
-    "paid",
-    "failed",
-  ],
-  default: "pending",
-},
+    type: String,
+    enum: [
+      "pending",
+      "awaiting_payment",
+      "paid",
+      "failed",
+    ],
+    default: "pending",
+  },
   invoice_url: String, // auto-generated commission invoice PDF
-  tx_ref: String,
+  tx_ref: { type: String, index: true },
   due_date: Date, // when commission must be paid
   // audit_log: [
   //   {
@@ -65,41 +65,41 @@ const CommissionSchema = new Schema({
   client_payment_status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
   owner_payment_status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
   owner_status: {
-      type: String,
-      enum: ["pending", "accepted", "rejected"],
-      default: "pending",
-    },
-    client_status: {
-      type: String,
-      enum: ["pending", "accepted", "rejected"],
-      default: "pending",
-    },
+    type: String,
+    enum: ["pending", "accepted", "rejected"],
+    default: "pending",
+  },
+  client_status: {
+    type: String,
+    enum: ["pending", "accepted", "rejected"],
+    default: "pending",
+  },
 
   client_rejection_reason: String,
   owner_rejection_reason: String,
   payment_attempts: [{
-  tx_ref: String,
-  partyType: { type: String, enum: ['client', 'owner'] },
-  amount: Number,
-  user_id: { type: Schema.Types.ObjectId, ref: 'User' },
-  status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
-  initiatedAt: Date
-}],
-client_paid_at: Date,
-owner_paid_at: Date,
-commission_type: {
-      type: String,
-      enum: ["broker_commission", "system_commission"],
-      required: false,
-    },
-app_fee: { type: Number,default: 0,},
-reminders: [
-  {
-    type: { type: String },
-    sentAt: Date,
-    sentBy: { type: Schema.Types.ObjectId, ref: "User" }
-  }
-]
-},{timestamps:true});
+    tx_ref: { type: String, index: true },
+    partyType: { type: String, enum: ['client', 'owner'] },
+    amount: Number,
+    user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+    initiatedAt: Date
+  }],
+  client_paid_at: Date,
+  owner_paid_at: Date,
+  commission_type: {
+    type: String,
+    enum: ["broker_commission", "system_commission"],
+    required: false,
+  },
+  app_fee: { type: Number, default: 0, },
+  reminders: [
+    {
+      type: { type: String },
+      sentAt: Date,
+      sentBy: { type: Schema.Types.ObjectId, ref: "User" }
+    }
+  ]
+}, { timestamps: true });
 
 export const Commission = model("Commission", CommissionSchema);

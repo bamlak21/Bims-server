@@ -261,18 +261,97 @@ export const verifyCommissionPayment = async (req, res) => {
     return res.status(400).json({ message: "Missing required field" });
 
   try {
-    const check = await verify(tx_ref);
-    if (check !== 200)
-      return res.status(404).json({ message: "Transaction not verified" });
+    const chapaRes = await verify(tx_ref);
 
-    const commission = await Commission.findOne({ tx_ref });
-    if (!commission) {
-      return res.status(400).json({ message: "Commission doesn't exist" });
+    // Check if verification itself failed or returned null
+    if (!chapaRes || chapaRes.status !== 'success') {
+      console.log("Verification failed. Response:", JSON.stringify(chapaRes, null, 2));
+      return res.status(400).json({ message: "Payment not successful or verification failed" });
     }
-    commission.status = "paid";
+
+    // Chapa data structure: { status: 'success', data: { status: 'success', ... } }
+    // We should check the inner data status too
+    const verifiedData = chapaRes.data;
+    if (verifiedData.status !== 'success') {
+      console.log("Payment status not success:", verifiedData.status);
+      return res.status(400).json({ message: `Payment status is ${verifiedData.status}` });
+    }
+
+    // allow reassignment if we need fallback
+    let commission = await Commission.findOne({
+      "payment_attempts.tx_ref": tx_ref
+    });
+
+    if (!commission) {
+      // Fallback search just to be safe if array structure mismatch
+      const fallback = await Commission.findOne({ tx_ref });
+      if (!fallback) return res.status(404).json({ message: "Commission not found for this transaction" });
+
+      // IMPORTANT: assign the fallback to commission so subsequent code can use it
+      commission = fallback;
+    }
+
+    // Find the specific attempt to know who paid
+    const attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
+    if (!attempt) {
+      // Should not happen if query matched
+      return res.status(400).json({ message: "Payment attempt record missing" });
+    }
+
+    const partyType = attempt.partyType; // 'client' or 'owner'
+    // Prevent double processing
+    if (attempt.status === 'paid') {
+      return res.status(200).json({
+        message: "Transaction already processed",
+        tx_ref,
+        status: commission.status,
+      });
+    }
+
+    attempt.status = 'paid';
+    // attempt.completedAt = new Date();
+
+    // Mark the side as paid
+    if (partyType === 'client') {
+      commission.client_payment_status = 'paid';
+      commission.client_paid_at = new Date();
+    } else if (partyType === 'owner') {
+      commission.owner_payment_status = 'paid';
+      commission.owner_paid_at = new Date();
+    }
+
+    // Check if fully paid
+    if (commission.client_payment_status === 'paid' && commission.owner_payment_status === 'paid') {
+      commission.status = 'paid';
+
+      // Update Deal
+      const deal = await Deal.findOneAndUpdate(
+        { commission_id: commission._id },
+        {
+          status: 'completed',
+          app_fee: commission.app_fee || 0,
+          commission_type: commission.commission_type,
+        },
+        { new: true },
+      );
+
+      // Update Listing
+      const listingId = commission.listing_id;
+      const model = commission.listing_type === 'Property' ? Property : Vehicle;
+      await model.findOneAndUpdate({
+        _id: listingId
+      }, {
+        status: "sold"
+      }, { new: true });
+    } else {
+      // Partial payment
+      commission.status = 'awaiting_payment';
+    }
+
     await commission.save();
+
     return res.status(200).json({
-      message: "Transaction verified",
+      message: "Transaction verified successfully",
       tx_ref,
       status: commission.status,
     });
