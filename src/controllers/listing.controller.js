@@ -215,16 +215,26 @@ export const fetchListing = async (req, res) => {
 
     const fetchData = (Model, type) =>
       Model.find(buildFilter(type))
-        .populate("owner_id", "firstName lastName")
-        .populate("broker_id", "firstName lastName")
+        .populate("owner_id", "firstName lastName photo")
+        .populate("broker_id", "firstName lastName photo")
         .sort({ created_at: -1 })
         .lean()
         .then((data) =>
-          data.map((item) => ({
-            ...item,
-            type,
-            isAssignedToCurrentUser: userDealListingIds.includes(item._id?.toString()),
-          }))
+          data.map((item) => {
+            // MASK LOCATION: Hide exact address details
+            if (item.location) {
+              item.location = {
+                city: item.location.city,
+                subcity: item.location.subcity,
+                // HIDDEN: woreda, address (street/house number)
+              };
+            }
+            return {
+              ...item,
+              type,
+              isAssignedToCurrentUser: userDealListingIds.includes(item._id?.toString()),
+            };
+          })
         );
 
     let vehicles = [];
@@ -263,10 +273,14 @@ export const fetchListingCount = async (req, res) => {
       Vehicle.countDocuments({ owner_id: id }),
       Property.countDocuments({ owner_id: id }),
     ]);
+    const [vehiclesSold, propertySold] = await Promise.all([
+      Vehicle.countDocuments({ owner_id: id, status:"sold"}),
+      Property.countDocuments({ owner_id: id, status:"sold" }),
+    ]);
 
     return res
       .status(200)
-      .json({ owner_id: id, vehicles, property, total: vehicles + property });
+      .json({ owner_id: id, vehicles, property, total: vehicles + property , vehiclesSold, propertySold, totalSold:vehiclesSold+propertySold});
   } catch (err) {
     console.log("Error counting listings:", err);
     return res.status(500).json({ message: "Server Error" });
@@ -356,9 +370,18 @@ export const fetchListingById = async (req, res) => {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
     const listing = await model
       .findById(id)
-      .populate("broker_id", "firstName lastName email")
-      .populate("owner_id", "firstName lastName email")
+      .populate("broker_id", "firstName lastName photo")
+      .populate("owner_id", "firstName lastName photo")
       .lean();
+
+    // MASK LOCATION: Hide exact address details
+    if (listing && listing.location) {
+      listing.location = {
+        city: listing.location.city,
+        subcity: listing.location.subcity,
+        // HIDDEN: woreda, address
+      };
+    }
     console.log(listing);
 
     return res.status(200).json({ message: "Success", listing });

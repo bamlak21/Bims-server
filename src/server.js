@@ -10,6 +10,7 @@ import commissionsRouter from "./routes/commissions.routes.js";
 import dealsRouter from "./routes/deals.routes.js";
 import reportRoute from "./routes/report.routes.js";
 import chatRoute from "./routes/chat.routes.js";
+import ratingRouter from "./routes/rating.routes.js";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { swaggerOptions } from "./config/swaggerConfig.js";
@@ -25,7 +26,7 @@ console.log("JWT_SECRET:", process.env.JWT_SECRET);
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors:[ "http://localhost:5173","http://localhost:8081"],
+  cors: ["http://localhost:5173", "http://localhost:8081"],
   methods: ["GET", "POST"],
 });
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
@@ -62,6 +63,7 @@ app.use("/api/commissions", commissionsRouter);
 app.use("/api/deals", dealsRouter);
 app.use("/api/report", reportRoute);
 app.use("/api/chat", chatRoute);
+app.use("/api/ratings", ratingRouter);
 app.use("/uploads", express.static("uploads"));
 app.get("/", (req, res) => {
   res.send("Server is running!");

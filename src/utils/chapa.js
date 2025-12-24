@@ -37,7 +37,7 @@ export const initialization = async (
   try {
     // Build a return_url that already contains both commission_id and tx_ref.
     // This prevents the provider from appending another `?` and producing a malformed querystring.
-    const returnUrlBase = process.env.RETURN_URL_BASE || "http://localhost:5173/verify-payment";
+    const returnUrlBase = "http://localhost:5173/verify-payment";
     const return_url = `${returnUrlBase}?commission_id=${encodeURIComponent(commissionId)}&tx_ref=${encodeURIComponent(tx_ref)}`;
 
     const reqBody = {

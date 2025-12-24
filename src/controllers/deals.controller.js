@@ -17,8 +17,8 @@ export const getDealsByBroker = async (req, res) => {
 
     const deals = await Deal.find(query)
       .populate("listing_id")
-      .populate("owner_id","firstName lastName")
-      .populate("client_id","firstName lastName")
+      .populate("owner_id", "firstName lastName")
+      .populate("client_id", "firstName lastName")
       .sort({ createdAt: -1 });
 
     res.json(deals);
@@ -69,7 +69,10 @@ export const getDealsByBroker = async (req, res) => {
 export const getDealById = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id)
-      .populate('broker_id owner_id client_id listing_id')
+      .populate('broker_id', 'firstName lastName photo userType')
+      .populate('owner_id', 'firstName lastName photo userType')
+      .populate('client_id', 'firstName lastName photo userType')
+      .populate('listing_id')
       .populate({
         path: 'commission_id',
         populate: [
@@ -80,6 +83,19 @@ export const getDealById = async (req, res) => {
       });
 
     if (!deal) return res.status(404).json({ message: 'Deal not found' });
+
+    // ACCESS CONTROL: Verify requester is a participant in this deal
+    const userId = req.user?._id || req.user?.id;
+    const isBroker = deal.broker_id;
+    const isOwner = deal.owner_id ;
+    const isClient = deal.client_id ;
+
+    if (!isBroker && !isOwner && !isClient) {
+      return res.status(403).json({
+        message: 'Unauthorized: You are not a participant in this deal'
+      });
+    }
+
     res.json(deal);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -177,12 +193,12 @@ export const updateDeal = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-   
+
     // Populate listing_id so we can use its _id later
     const deal = await Deal.findById(id).populate("listing_id").populate('client_id', 'firstName lastName')
       .populate('owner_id', 'firstName lastName')
       .populate('broker_id', 'firstName lastName');
-      
+
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
@@ -190,7 +206,7 @@ export const updateDeal = async (req, res) => {
     const listing = await ListingModel.findById(deal.listing_id._id)
       .select("needBroker")
       .lean();
-      if (!listing) {
+    if (!listing) {
       return res.status(404).json({ message: "Listing not found" });
     }
 
@@ -205,35 +221,35 @@ export const updateDeal = async (req, res) => {
       !deal.commission_id // avoid creating twice
     ) {
       deal.status = "agreement";
-      if(needBroker&&deal.broker_id){
-      // Capture the returned commission
-      const commission = await CreateCommission({
-        broker_id: deal.broker_id,
-        owner_id: deal.owner_id,
-        client_id: deal.client_id,
-        listing_id: deal.listing_id._id,   // populated → real ObjectId
-        listing_type: deal.listing_type,
-        sale_price: deal.listing_snapshot?.price,
-      });
+      if (needBroker && deal.broker_id) {
+        // Capture the returned commission
+        const commission = await CreateCommission({
+          broker_id: deal.broker_id,
+          owner_id: deal.owner_id,
+          client_id: deal.client_id,
+          listing_id: deal.listing_id._id,   // populated → real ObjectId
+          listing_type: deal.listing_type,
+          sale_price: deal.listing_snapshot?.price,
+        });
 
-      // Link commission to deal
-      deal.commission_id = commission._id;
-    }
-    else{
-      const commission = await CreateCommission({
-        broker_id: null,
-        owner_id: deal.owner_id,
-        client_id: deal.client_id,
-        listing_id: deal.listing_id._id,   // populated → real ObjectId
-        listing_type: deal.listing_type,
-        sale_price: deal.listing_snapshot?.price,
-      });
+        // Link commission to deal
+        deal.commission_id = commission._id;
+      }
+      else {
+        const commission = await CreateCommission({
+          broker_id: null,
+          owner_id: deal.owner_id,
+          client_id: deal.client_id,
+          listing_id: deal.listing_id._id,   // populated → real ObjectId
+          listing_type: deal.listing_type,
+          sale_price: deal.listing_snapshot?.price,
+        });
 
-      // Link commission to deal
-      deal.commission_id = commission._id;
+        // Link commission to deal
+        deal.commission_id = commission._id;
+      }
     }
-    } 
-  
+
     else if (
       deal.owner_status === "cancelled" ||
       deal.client_status === "cancelled"
@@ -244,15 +260,15 @@ export const updateDeal = async (req, res) => {
     await deal.save();
 
     // Return populated data (optional but helpful for the frontend)
-  // updateDeal controller
-const populatedDeal = await Deal.findById(deal._id)
-  .populate('commission_id')
-  .populate('listing_id')
-  .populate('client_id', 'firstName lastName userType')
-  .populate('owner_id', 'firstName lastName userType')
-  .populate('broker_id', 'firstName lastName userType');
+    // updateDeal controller
+    const populatedDeal = await Deal.findById(deal._id)
+      .populate('commission_id')
+      .populate('listing_id')
+      .populate('client_id', 'firstName lastName userType')
+      .populate('owner_id', 'firstName lastName userType')
+      .populate('broker_id', 'firstName lastName userType');
 
-res.json(populatedDeal);   // commission_id is a STRING here because of .lean();
+    res.json(populatedDeal);   // commission_id is a STRING here because of .lean();
   } catch (error) {
     console.error("Error updating deal:", error);
     res.status(500).json({ message: "Failed to update deal", error: error.message });

@@ -253,7 +253,6 @@ export const PayCommission = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 export const verifyCommissionPayment = async (req, res) => {
   const { tx_ref } = req.query;
 
@@ -263,104 +262,138 @@ export const verifyCommissionPayment = async (req, res) => {
   try {
     const chapaRes = await verify(tx_ref);
 
-    // Check if verification itself failed or returned null
-    if (!chapaRes || chapaRes.status !== 'success') {
-      console.log("Verification failed. Response:", JSON.stringify(chapaRes, null, 2));
+    if (!chapaRes) {
+      console.log("Chapa verify returned null/undefined for tx_ref:", tx_ref);
       return res.status(400).json({ message: "Payment not successful or verification failed" });
     }
 
-    // Chapa data structure: { status: 'success', data: { status: 'success', ... } }
-    // We should check the inner data status too
-    const verifiedData = chapaRes.data;
-    if (verifiedData.status !== 'success') {
-      console.log("Payment status not success:", verifiedData.status);
-      return res.status(400).json({ message: `Payment status is ${verifiedData.status}` });
+    // Read statuses safely
+    const topStatus = chapaRes.status;
+    const verifiedData = chapaRes.data || {};
+    const dataStatus = verifiedData.status;
+
+    console.log("Chapa verify response:", JSON.stringify(chapaRes, null, 2));
+
+    if (topStatus !== 'success' && dataStatus !== 'success') {
+      console.log("Chapa verification did not return success. topStatus:", topStatus, "dataStatus:", dataStatus);
+      return res.status(400).json({ message: "Payment not successful or verification failed" });
     }
 
-    // allow reassignment if we need fallback
-    let commission = await Commission.findOne({
-      "payment_attempts.tx_ref": tx_ref
-    });
+    // 1) Try to find commission by payment_attempts.tx_ref (preferred)
+    let commission = await Commission.findOne({ "payment_attempts.tx_ref": tx_ref });
+
+    // 2) fallback: check top-level tx_ref
+    if (!commission) {
+      commission = await Commission.findOne({ tx_ref });
+    }
 
     if (!commission) {
-      // Fallback search just to be safe if array structure mismatch
-      const fallback = await Commission.findOne({ tx_ref });
-      if (!fallback) return res.status(404).json({ message: "Commission not found for this transaction" });
-
-      // IMPORTANT: assign the fallback to commission so subsequent code can use it
-      commission = fallback;
+      console.error("Commission not found for tx_ref:", tx_ref);
+      return res.status(404).json({ message: "Commission not found for this transaction" });
     }
 
-    // Find the specific attempt to know who paid
-    const attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
+    // 3) find attempt inside the commission (if any)
+    let attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
+
     if (!attempt) {
-      // Should not happen if query matched
-      return res.status(400).json({ message: "Payment attempt record missing" });
+      console.warn("Payment attempt missing for tx_ref:", tx_ref, "commission:", commission._id);
+      // we'll create one later if needed
     }
 
-    const partyType = attempt.partyType; // 'client' or 'owner'
-    // Prevent double processing
-    if (attempt.status === 'paid') {
+    // 4) determine partyType: prefer attempt.partyType, then Chapa meta
+    const partyType =
+      attempt?.partyType ||
+      (verifiedData.meta && (verifiedData.meta.partyType || verifiedData.meta.party_type)) ||
+      (verifiedData.meta && verifiedData.meta.partytype) ||
+      null;
+
+    // 5) If it was already processed, still return commission status so frontend shows success if paid
+    if (attempt?.status === 'paid') {
+      const populated = await Commission.findById(commission._id)
+        .populate("client_id", "firstName lastName")
+        .populate("owner_id", "firstName lastName")
+        .populate("broker_id", "firstName lastName")
+        .lean();
+
       return res.status(200).json({
         message: "Transaction already processed",
         tx_ref,
         status: commission.status,
+        commission: populated,
       });
     }
 
-    attempt.status = 'paid';
-    // attempt.completedAt = new Date();
+    // 6) Mark attempt as paid (or create record)
+    if (attempt) {
+      attempt.status = 'paid';
+      // attempt.completedAt = new Date();
+    } else {
+      commission.payment_attempts = commission.payment_attempts || [];
+      commission.payment_attempts.push({
+        tx_ref,
+        partyType,
+        amount: verifiedData?.amount ?? undefined,
+        user_id: undefined,
+        status: 'paid',
+        initiatedAt: new Date()
+      });
+    }
 
-    // Mark the side as paid
+    // 7) mark side as paid
     if (partyType === 'client') {
       commission.client_payment_status = 'paid';
       commission.client_paid_at = new Date();
     } else if (partyType === 'owner') {
       commission.owner_payment_status = 'paid';
       commission.owner_paid_at = new Date();
+    } else {
+      console.warn("Unknown partyType for tx_ref:", tx_ref, " - partyType:", partyType);
     }
 
-    // Check if fully paid
+    // 8) set overall status and update related models if fully paid
     if (commission.client_payment_status === 'paid' && commission.owner_payment_status === 'paid') {
       commission.status = 'paid';
 
-      // Update Deal
-      const deal = await Deal.findOneAndUpdate(
+      const appFee = verifiedData?.meta?.app_fee ?? commission.app_fee ?? 0;
+      const commType = verifiedData?.meta?.commission_type ?? commission.commission_type;
+
+      await Deal.findOneAndUpdate(
         { commission_id: commission._id },
         {
           status: 'completed',
-          app_fee: commission.app_fee || 0,
-          commission_type: commission.commission_type,
+          app_fee: appFee,
+          commission_type: commType,
         },
-        { new: true },
+        { new: true }
       );
 
-      // Update Listing
       const listingId = commission.listing_id;
       const model = commission.listing_type === 'Property' ? Property : Vehicle;
-      await model.findOneAndUpdate({
-        _id: listingId
-      }, {
-        status: "sold"
-      }, { new: true });
+      await model.findOneAndUpdate({ _id: listingId }, { status: "sold" }, { new: true });
     } else {
-      // Partial payment
       commission.status = 'awaiting_payment';
     }
 
     await commission.save();
 
+    // return the populated commission so frontend can render consistently
+    const populated = await Commission.findById(commission._id)
+      .populate("client_id", "firstName lastName")
+      .populate("owner_id", "firstName lastName")
+      .populate("broker_id", "firstName lastName")
+      .lean();
+
     return res.status(200).json({
       message: "Transaction verified successfully",
       tx_ref,
       status: commission.status,
+      commission: populated,
     });
   } catch (error) {
     console.error(`Transaction Verification failed ${tx_ref} `, error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 // export const handleWebhook = async (req, res) => {
 //   const { tx_ref, status } = req.body;
 //   const payload = req.body;

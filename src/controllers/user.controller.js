@@ -89,8 +89,10 @@ export const getAllUsers = async (req, res) => {
 export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
+    const requestingUserId = req.user?._id || req.user?.id;
+
     const user = await User.findById(id).select(
-      "firstName lastName email phoneNumber userType photo verified createdAt address saved isBanned isActive"
+      "firstName lastName email phoneNumber userType photo verified createdAt address saved isBanned isActive socialLinks"
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -108,7 +110,7 @@ export const getCurrentUserProfile = async (req, res) => {
       }
 
       const listing = await Model.findById(save.listingId)
-        .populate("broker_id", "firstName lastName") // Optionally populate broker details if broker_id is a ref to User
+        .populate("broker_id", "firstName lastName")
         .exec();
 
       if (listing) {
@@ -116,11 +118,24 @@ export const getCurrentUserProfile = async (req, res) => {
       }
     }
 
-    // Return the user profile with populated listings
+    // DATA MASKING: Hide sensitive info if requester is not the profile owner
+    let userData = user.toObject();
+    const isOwnProfile = requestingUserId && String(requestingUserId) === String(id);
+
+    if (!isOwnProfile) {
+      // HIDE sensitive fields from strangers
+      delete userData.email;
+      delete userData.phoneNumber;
+      delete userData.address;
+      delete userData.socialLinks;
+      delete userData.saved; // Hide saved listings too
+    }
+
+    // Return the user profile with populated listings (only if own profile)
     res.status(200).json({
-      ...user.toObject(), // Spread the user fields
-      listings,
-      user, // Add the populated listings array
+      ...userData,
+      listings: isOwnProfile ? listings : [], // Only show listings to owner
+      user: userData,
     });
   } catch (err) {
     console.error("Error in /me route:", err);
@@ -212,7 +227,7 @@ export const GetBrokers = async (req, res) => {
   try {
     const brokers = await User.find({ userType: "broker" })
       .select(
-        "firstName lastName email phoneNumber socialLinks photo verified userType"
+        "firstName lastName email phoneNumber socialLinks photo verified userType averageRating ratingCount"
       )
       .lean();
 
@@ -230,7 +245,7 @@ export const GetBrokerById = async (req, res) => {
     }
 
     const broker = await User.findOne({ _id: id, userType: "broker" })
-      .select("firstName lastName email phoneNumber socialLinks photo verified")
+      .select("firstName lastName email phoneNumber socialLinks photo verified averageRating ratingCount")
       .lean();
 
     if (!broker) {

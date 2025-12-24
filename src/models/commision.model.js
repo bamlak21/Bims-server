@@ -52,7 +52,7 @@ const CommissionSchema = new Schema({
     default: "pending",
   },
   invoice_url: String, // auto-generated commission invoice PDF
-  tx_ref: { type: String, index: true },
+  tx_ref: String,
   due_date: Date, // when commission must be paid
   // audit_log: [
   //   {
