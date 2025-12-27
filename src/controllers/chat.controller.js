@@ -6,6 +6,7 @@ import { Vehicle } from "../models/vehicle.model.js";
 import { onlineUsers } from "../Socket/socketManager.js";
 import { Deal } from "../models/deals.model.js";
 import { User } from "../models/user.model.js";
+import { maskSensitiveData, shouldMaskContent } from "../utils/moderation.js";
 
 
 export const GetChatRooms = async (req, res) => {
@@ -157,10 +158,18 @@ export const CreateChatRoomAndSendMessage = async (req, res) => {
 
     const messageStatus = anyReceiverOnline ? "delivered" : "sent";
 
+    // Check for masking
+    const shouldMask = await shouldMaskContent(listingId);
+    let messageContent = text || `Hello, I'm interested in your listing.`;
+
+    if (shouldMask) {
+      messageContent = maskSensitiveData(messageContent);
+    }
+
     const message = new Message({
       senderId,
       roomId: chatRoom._id,
-      message: text || `Hello, I'm interested in your listing.`,
+      message: messageContent,
       status: messageStatus,
     });
 

@@ -89,6 +89,9 @@ export const getAllUsers = async (req, res) => {
 export const getCurrentUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
     const requestingUserId = req.user?._id || req.user?.id;
 
     const user = await User.findById(id).select(
@@ -121,7 +124,7 @@ export const getCurrentUserProfile = async (req, res) => {
     // DATA MASKING: Hide sensitive info if requester is not the profile owner
     let userData = user.toObject();
     const isOwnProfile = requestingUserId && String(requestingUserId) === String(id);
-
+    
     if (!isOwnProfile) {
       // HIDE sensitive fields from strangers
       delete userData.email;

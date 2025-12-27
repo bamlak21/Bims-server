@@ -616,3 +616,37 @@ export const sendPaymentReminder = async (req, res) => {
     return res.status(500).json({ message: "Failed to send reminder" });
   }
 };
+
+export const getCommissionStats = async (req, res) => {
+  const userId = req.user.id;
+  const role = req.user.userType;
+
+  try {
+    let pendingCount = 0;
+
+    // Logic for Clients: Count commissions where I am client AND client_payment_status is pending AND status is not rejected/failed
+    if (role === 'client') {
+      pendingCount = await Commission.countDocuments({
+        client_id: userId,
+        client_payment_status: { $ne: 'paid' },
+        status: { $nin: ['paid', 'rejected', 'failed'] }
+      });
+    }
+    // Logic for Owners: Count commissions where I am owner AND owner_payment_status is pending AND status is not rejected/failed
+    else if (role === 'owner') {
+      pendingCount = await Commission.countDocuments({
+        owner_id: userId,
+        owner_payment_status: { $ne: 'paid' },
+        status: { $nin: ['paid', 'rejected', 'failed'] }
+      });
+    }
+
+    return res.status(200).json({
+      pendingCommissions: pendingCount
+    });
+
+  } catch (error) {
+    console.error("Error fetching commission stats:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

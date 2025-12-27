@@ -1,7 +1,8 @@
 import ChatRoom from "../models/chat.model.js";
 import Message from "../models/message.model.js";
 import { onlineUsers } from "./socketManager.js"; // ⬅️ import global store
-import {User} from "../models/user.model.js"
+import { User } from "../models/user.model.js"
+import { maskSensitiveData, shouldMaskContent } from "../utils/moderation.js";
 
 export function RegisterSocket(io) {
   io.on("connection", (socket) => {
@@ -15,16 +16,16 @@ export function RegisterSocket(io) {
       if (userId) {
         currentUserId = userId;
 
-      // Support multiple sockets per user
-      if (!onlineUsers.has(userId)) {
-        onlineUsers.set(userId, new Set());
-      }
-      onlineUsers.get(userId).add(socket.id);
+        // Support multiple sockets per user
+        if (!onlineUsers.has(userId)) {
+          onlineUsers.set(userId, new Set());
+        }
+        onlineUsers.get(userId).add(socket.id);
 
-      console.log(`✅ User ${userId} registered and is online`);
-      
-      // Notify ALL clients about online status
-      io.emit("userOnlineStatus", { userId, status: "online" }); // notify others
+        console.log(`✅ User ${userId} registered and is online`);
+
+        // Notify ALL clients about online status
+        io.emit("userOnlineStatus", { userId, status: "online" }); // notify others
       }
     });
 
@@ -63,76 +64,83 @@ export function RegisterSocket(io) {
     });
 
 
-socket.on("chatMessage", async ({ roomId, userId, message }) => {
-  try {
-    if (!currentUserId || userId !== currentUserId) {
-      return socket.emit("error", { message: "Please register first" });
-    }
+    socket.on("chatMessage", async ({ roomId, userId, message }) => {
+      try {
+        if (!currentUserId || userId !== currentUserId) {
+          return socket.emit("error", { message: "Please register first" });
+        }
 
-    if (!message || !message.trim()) {
-      return socket.emit("error", { message: "Message cannot be empty" });
-    }
+        if (!message || !message.trim()) {
+          return socket.emit("error", { message: "Message cannot be empty" });
+        }
 
-    // Create message
-    const msg = await Message.create({ 
-      roomId, 
-      senderId: userId, 
-      message: message.trim() 
-    });
+        // Get room for recipients & checking masking
+        const room = await ChatRoom.findById(roomId);
+        if (!room) {
+          return socket.emit("error", { message: "Room not found" });
+        }
 
-    // ✅ FETCH SENDER PROFILE
-    const senderProfile = await User.findById(userId).select('photo userType');
-    
-    // Get room for recipients
-    const room = await ChatRoom.findById(roomId);
-    if (!room) {
-      return socket.emit("error", { message: "Room not found" });
-    }
+        // Masking Logic
+        const shouldMask = await shouldMaskContent(room.listingId);
+        let messageContent = message.trim();
+        if (shouldMask) {
+          messageContent = maskSensitiveData(messageContent);
+        }
 
-    // Determine status
-    const recipients = room.participants.filter(id => id.toString() !== userId);
-    let initialStatus = "sent";
-    
-    for (const recipientId of recipients) {
-      const recipientOnline = onlineUsers.has(recipientId.toString());
-      if (recipientOnline) {
-        initialStatus = "delivered";
-        break;
+        // Create message
+        const msg = await Message.create({
+          roomId,
+          senderId: userId,
+          message: messageContent
+        });
+
+        // ✅ FETCH SENDER PROFILE
+        const senderProfile = await User.findById(userId).select('photo userType');
+
+        // Determine status
+        const recipients = room.participants.filter(id => id.toString() !== userId);
+        let initialStatus = "sent";
+
+        for (const recipientId of recipients) {
+          const recipientOnline = onlineUsers.has(recipientId.toString());
+          if (recipientOnline) {
+            initialStatus = "delivered";
+            break;
+          }
+        }
+
+        msg.status = initialStatus;
+        await msg.save();
+
+        // ✅ SEND FULL SENDER PROFILE WITH MESSAGE
+        const messageData = {
+          _id: msg._id,
+          roomId: roomId,
+          senderId: msg.senderId,
+          senderProfile: {  // ✅ FULL PROFILE
+            _id: senderProfile._id,
+            name: senderProfile.name || senderProfile.username || "Unknown",
+            photo: senderProfile.photo || senderProfile.profilePhoto || null,
+            userType: senderProfile.userType || "user",
+          },
+          message: msg.message,
+          status: msg.status,
+          createdAt: msg.createdAt,
+        };
+
+        console.log(`💬 Message sent: ${msg._id} | To room: ${roomId}`);
+
+        // Emit to ALL in room
+        io.to(roomId).emit("chatMessage", messageData);
+
+        // Delivery confirmation to sender
+        socket.emit("messageDelivered", { roomId, messageId: msg._id });
+
+      } catch (err) {
+        console.error("chatMessage error:", err);
+        socket.emit("error", { message: "Failed to send message" });
       }
-    }
-
-    msg.status = initialStatus;
-    await msg.save();
-
-    // ✅ SEND FULL SENDER PROFILE WITH MESSAGE
-    const messageData = {
-      _id: msg._id,
-      roomId: roomId,
-      senderId: msg.senderId,
-      senderProfile: {  // ✅ FULL PROFILE
-        _id: senderProfile._id,
-        name: senderProfile.name || senderProfile.username || "Unknown",
-        photo: senderProfile.photo || senderProfile.profilePhoto || null,
-        userType: senderProfile.userType || "user",
-      },
-      message: msg.message,
-      status: msg.status,
-      createdAt: msg.createdAt,
-    };
-
-    console.log(`💬 Message sent: ${msg._id} | To room: ${roomId}`);
-
-    // Emit to ALL in room
-    io.to(roomId).emit("chatMessage", messageData);
-    
-    // Delivery confirmation to sender
-    socket.emit("messageDelivered", { roomId, messageId: msg._id });
-
-  } catch (err) {
-    console.error("chatMessage error:", err);
-    socket.emit("error", { message: "Failed to send message" });
-  }
-});
+    });
 
     socket.on("markAsRead", async ({ roomId, userId }) => {
       try {

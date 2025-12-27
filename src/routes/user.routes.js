@@ -18,7 +18,7 @@ import { AuthMiddleWare } from "../middleware/auth.middleware.js";
 const router = Router();
 
 // router.get("/userStats", getAllUsers);
-router.get("/profile/:id", getCurrentUserProfile);
+router.get("/profile/:id", AuthMiddleWare,getCurrentUserProfile);
 
 /**
  * @swagger

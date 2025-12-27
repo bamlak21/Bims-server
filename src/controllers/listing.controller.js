@@ -274,13 +274,13 @@ export const fetchListingCount = async (req, res) => {
       Property.countDocuments({ owner_id: id }),
     ]);
     const [vehiclesSold, propertySold] = await Promise.all([
-      Vehicle.countDocuments({ owner_id: id, status:"sold"}),
-      Property.countDocuments({ owner_id: id, status:"sold" }),
+      Vehicle.countDocuments({ owner_id: id, status: "sold" }),
+      Property.countDocuments({ owner_id: id, status: "sold" }),
     ]);
 
     return res
       .status(200)
-      .json({ owner_id: id, vehicles, property, total: vehicles + property , vehiclesSold, propertySold, totalSold:vehiclesSold+propertySold});
+      .json({ owner_id: id, vehicles, property, total: vehicles + property, vehiclesSold, propertySold, totalSold: vehiclesSold + propertySold });
   } catch (err) {
     console.log("Error counting listings:", err);
     return res.status(500).json({ message: "Server Error" });
@@ -462,24 +462,59 @@ export const SetListingToBroker = async (req, res) => {
 
 export const MyListings = async (req, res) => {
   const { id } = req.params;
+  const { search, type = 'all', category, minPrice, maxPrice } = req.query;
 
   if (!id) {
     return res.status(400).json({ message: "Required field missing" });
   }
 
   try {
-    const vehicles = await Vehicle.find({ owner_id: id })
-      .lean()
-      .populate("broker_id", "firstName lastName");
-    const properties = await Property.find({ owner_id: id })
-      .lean()
-      .populate("broker_id", "firstName lastName");
+    const filters = { owner_id: id };
 
-    if (vehicles.length === 0 && properties.length === 0) {
-      return res.status(404).json({ message: "No listings found" });
+    // Search logic
+    if (search) {
+      const searchRegex = { $regex: search, $options: "i" };
+      filters.$or = [
+        { title: searchRegex },
+        { "location.city": searchRegex },
+        { "location.subcity": searchRegex }
+      ];
+    }
+
+    // Category filter
+    if (category && category !== "all") {
+      filters.category = category;
+    }
+
+    // Price range
+    if (minPrice || maxPrice) {
+      filters.price = {};
+      if (minPrice) filters.price.$gte = Number(minPrice);
+      if (maxPrice) filters.price.$lte = Number(maxPrice);
+    }
+
+    let vehicles = [];
+    let properties = [];
+
+    if (type === "Vehicle" || type.toLowerCase() === "all" || type === 'vehicle') {
+      const vehicleFilters = { ...filters };
+      // Remove location search from vehicle filters if it causes issues, 
+      // but $or with non-existent fields is safe in MongoDB.
+      vehicles = await Vehicle.find(vehicleFilters)
+        .lean()
+        .populate("broker_id", "firstName lastName");
+    }
+
+    if (type === "Property" || type.toLowerCase() === "all" || type === 'property') {
+      properties = await Property.find(filters)
+        .lean()
+        .populate("broker_id", "firstName lastName");
     }
 
     const listings = [...vehicles, ...properties];
+
+    // Sort by newest first
+    listings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return res
       .status(200)
@@ -798,5 +833,114 @@ export const SaveListing = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const updateListing = async (req, res) => {
+  const { id } = req.params;
+  const {
+    type,
+    title,
+    description,
+    category,
+    price,
+    vehicleSpecs,
+    location,
+    specifications,
+    existingImages, // Array of strings (urls/paths)
+    existingProofImages, // Array of strings
+    needBroker,
+    owner_id
+  } = req.body;
+
+  if (!id || !type) {
+    return res.status(400).json({ message: "Listing ID and type are required" });
+  }
+
+  // Parse JSON fields if they are strings
+  const parsedLocation = typeof location === "string" ? JSON.parse(location) : location;
+  const parsedSpecifications = typeof specifications === "string" ? JSON.parse(specifications) : specifications;
+  const parsedVehicleSpecs = typeof vehicleSpecs === "string" ? JSON.parse(vehicleSpecs) : vehicleSpecs;
+
+  // Handle existing images 
+  let keptImages = [];
+  if (existingImages) {
+    keptImages = Array.isArray(existingImages) ? existingImages : [existingImages];
+  } else if (typeof existingImages === 'string') {
+    keptImages = [existingImages];
+  }
+
+  let keptProofImages = [];
+  if (existingProofImages) {
+    keptProofImages = Array.isArray(existingProofImages) ? existingProofImages : [existingProofImages];
+  } else if (typeof existingProofImages === 'string') {
+    keptProofImages = [existingProofImages];
+  }
+
+
+  // New uploaded images
+  const newImagePaths = req.files?.images?.map((file) => file.path.replace(/\\/g, "/")) || [];
+  const newProofImagePaths = req.files?.proofimages?.map((file) => file.path.replace(/\\/g, "/")) || [];
+
+  // Combine images
+  const finalImagePaths = [...keptImages, ...newImagePaths];
+  const finalProofImagePaths = [...keptProofImages, ...newProofImagePaths];
+
+  // Validation
+  if (finalImagePaths.length === 0) {
+    return res.status(400).json({ message: "At least one image is required" });
+  }
+
+  try {
+    const normalizedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+    const Model = normalizedType === "Vehicle" ? Vehicle : Property;
+
+    const listing = await Model.findById(id);
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    // Authorization check
+    if (req.user && req.user._id && listing.owner_id) {
+      if (listing.owner_id.toString() !== req.user._id.toString() && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized to edit this listing" });
+      }
+    }
+    // Allow update only if status is pending or rejected
+    if (!["pending", "rejected"].includes(listing.status)) {
+      return res.status(400).json({
+        message: "You can only update listings that are pending or rejected"
+      });
+    }
+
+    // Update fields
+    if (title) listing.title = title;
+    if (description) listing.description = description;
+    if (category) listing.category = category;
+    if (price) listing.price = price;
+    
+    listing.needBroker = needBroker === 'Yes' ? 'Yes' : 'No';
+
+
+    // Reset status to pending
+    listing.status = "pending";
+
+    if (normalizedType === "Vehicle") {
+      if (parsedVehicleSpecs) listing.vehicleSpecs = parsedVehicleSpecs;
+    } else {
+      if (parsedLocation) listing.location = parsedLocation;
+      if (parsedSpecifications) listing.specifications = parsedSpecifications;
+    }
+
+    listing.image_paths = finalImagePaths;
+    if (finalProofImagePaths.length > 0) listing.proofImage_paths = finalProofImagePaths;
+
+    await listing.save();
+
+    return res.status(200).json({ message: "Listing updated successfully", listing });
+
+  } catch (error) {
+    console.error("Error updating listing:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };

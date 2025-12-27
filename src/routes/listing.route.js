@@ -12,6 +12,7 @@ import {
   SaveListing,
   SetListingToBroker,
   verifyListing,
+  updateListing,
 } from "../controllers/listing.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 import { AuthMiddleWare } from "../middleware/auth.middleware.js";
@@ -176,10 +177,42 @@ const router = Router();
  *                   type: string
  */
 
-router.post("/create",  upload.fields([
-    { name: "images", maxCount: 5 },
-    { name: "proofimages", maxCount: 2 }
-  ]), CreateListing);
+router.post("/create", upload.fields([
+  { name: "images", maxCount: 5 },
+  { name: "proofimages", maxCount: 2 }
+]), CreateListing);
+
+/**
+ * @swagger
+ * /api/listing/update/{id}:
+ *   put:
+ *     summary: Update an existing listing
+ *     tags: [Listings]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type: { type: string }
+ *               title: { type: string }
+ *               description: { type: string }
+ *               price: { type: number }
+ *               existingImages: { type: array, items: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Updated successfully
+ */
+router.put("/update/:id", AuthMiddleWare, upload.fields([
+  { name: "images", maxCount: 5 },
+  { name: "proofimages", maxCount: 2 }
+]), updateListing);
 
 /**
  * @swagger
@@ -320,8 +353,8 @@ router.get("/fetchlistcount/:id", fetchListingCount);
  *                   type: string
  *                   example: Internal Server Error
  */
-router.get("/fetch",AuthMiddleWare ,fetchListing);
-router.get("/fetch-demo",fetchListing);
+router.get("/fetch", AuthMiddleWare, fetchListing);
+router.get("/fetch-demo", fetchListing);
 
 /**
  * @swagger
