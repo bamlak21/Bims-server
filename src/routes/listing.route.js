@@ -552,7 +552,7 @@ router.get("/fetchListing", fetchListingById);
  *                   example: Server Error
  */
 
-router.patch("/verify-listing", verifyListing);
+router.patch("/verify-listing", AuthMiddleWare, verifyListing);
 
 /**
  * @swagger

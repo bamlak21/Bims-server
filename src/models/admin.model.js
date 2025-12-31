@@ -4,6 +4,7 @@ const AdminSchema = new Schema({
   name: String,
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  role:{type: String, default:'admin'},
   otp: { type: String },
   otpExpiry: { type: Date },
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { assignBrokerforVerification, fetchAllUsers, fetchListing, fetchPendingListing, getBrokerPerformance, getInsights, getListingGrowth, getOverview, getReports, getUserGrowth, RejectListing, systemHealth } from "../controllers/admin.controller.js";
 import { GetCommissions } from "../controllers/commission.controller.js";
+import { AuthMiddleWare } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -57,17 +58,17 @@ const router = Router();
  *         description: Server error
  */
 
-router.patch("/reject-listing", RejectListing);
+router.patch("/reject-listing", AuthMiddleWare, RejectListing);
 router.get("/overview", getOverview);
 router.get("/insights", getInsights);
 router.get("/reports", getReports);
 router.get("/broker-performance", getBrokerPerformance);
-router.get("/user-growth",getUserGrowth);
-router.get("/listing-growth",getListingGrowth);
-router.get('/system-health',systemHealth);
-router.get("/fetch",fetchListing);
-router.get("/pending-verification",fetchPendingListing)
-router.post("/:id/assign-verifier",assignBrokerforVerification);
-router.get("/get-all",fetchAllUsers);
+router.get("/user-growth", getUserGrowth);
+router.get("/listing-growth", getListingGrowth);
+router.get('/system-health', systemHealth);
+router.get("/fetch", AuthMiddleWare, fetchListing);
+router.get("/pending-verification", AuthMiddleWare, fetchPendingListing)
+router.post("/:id/assign-verifier", assignBrokerforVerification);
+router.get("/get-all", fetchAllUsers);
 
 export default router;

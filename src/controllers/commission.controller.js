@@ -187,7 +187,7 @@ export const updateCommissionDecision = async (req, res) => {
 };
 
 export const PayCommission = async (req, res) => {
-  const { amount, commissionId, user_id, partyType } = req.body;
+  const { amount, commissionId, user_id, partyType, platform = 'web', web_redirect_url } = req.body;
 
   if (!amount || !commissionId || !user_id) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -241,7 +241,11 @@ export const PayCommission = async (req, res) => {
       user.email,
       user.userType,
       partyType, // pass to initialization
-      commissionId
+      commissionId,
+      commission.commission_type,
+      commission.app_fee,
+      platform,
+      web_redirect_url
     );
 
     if (!checkoutUrl || !checkoutUrl.url) {
@@ -254,12 +258,78 @@ export const PayCommission = async (req, res) => {
   }
 };
 export const verifyCommissionPayment = async (req, res) => {
+  console.log(`[VERIFY] ===== VERIFICATION REQUEST RECEIVED =====`);
+  console.log(`[VERIFY] Query params:`, req.query);
+
   const { tx_ref } = req.query;
 
-  if (!tx_ref)
+  if (!tx_ref) {
+    console.log(`[VERIFY] ❌ Missing tx_ref in query`);
     return res.status(400).json({ message: "Missing required field" });
+  }
 
   try {
+    console.log(`[VERIFY] Starting verification for tx_ref: ${tx_ref}`);
+
+    // 1) Try to find commission by payment_attempts.tx_ref (preferred)
+    let commission = await Commission.findOne({ "payment_attempts.tx_ref": tx_ref });
+    console.log(`[VERIFY] Commission found by payment_attempts.tx_ref:`, commission ? `Yes (ID: ${commission._id})` : 'No');
+
+    // 2) fallback: check top-level tx_ref
+    if (!commission) {
+      commission = await Commission.findOne({ tx_ref });
+      console.log(`[VERIFY] Commission found by top-level tx_ref:`, commission ? `Yes (ID: ${commission._id})` : 'No');
+    }
+
+    if (commission) {
+      console.log(`[VERIFY] Commission status: ${commission.status}`);
+      console.log(`[VERIFY] Payment attempts count: ${commission.payment_attempts?.length || 0}`);
+
+      // 3) find attempt inside the commission (if any)
+      let attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
+      console.log(`[VERIFY] Attempt found:`, attempt ? `Yes (status: ${attempt.status})` : 'No');
+
+      // 4) If it was already processed by webhook, return success immediately
+      if (attempt?.status === 'paid') {
+        const populated = await Commission.findById(commission._id)
+          .populate("client_id", "firstName lastName")
+          .populate("owner_id", "firstName lastName")
+          .populate("broker_id", "firstName lastName")
+          .lean();
+
+        console.log(`[VERIFY] ✅ Transaction ${tx_ref} already marked as paid in DB. Returning success directly.`);
+        return res.status(200).json({
+          message: "Payment successfully done",
+          tx_ref,
+          status: commission.status,
+          commission: populated,
+        });
+      }
+
+      // Also check if commission is already in a final state (paid/awaiting_payment)
+      // This handles cases where webhook processed it but we're verifying again
+      if (commission.status === 'paid' || commission.status === 'awaiting_payment') {
+        const populated = await Commission.findById(commission._id)
+          .populate("client_id", "firstName lastName")
+          .populate("owner_id", "firstName lastName")
+          .populate("broker_id", "firstName lastName")
+          .lean();
+
+        console.log(`[VERIFY] ✅ Commission ${commission._id} already in final state: ${commission.status}. Returning success.`);
+        return res.status(200).json({
+          message: "Payment successfully done",
+          tx_ref,
+          status: commission.status,
+          commission: populated,
+        });
+      }
+
+      console.log(`[VERIFY] Commission found but not in final state. Proceeding to call Chapa API...`);
+    } else {
+      console.log(`[VERIFY] ⚠️  Commission not found for tx_ref: ${tx_ref}`);
+    }
+
+    // 5) Only call Chapa if not already marked as paid in our DB
     const chapaRes = await verify(tx_ref);
 
     if (!chapaRes) {
@@ -279,12 +349,9 @@ export const verifyCommissionPayment = async (req, res) => {
       return res.status(400).json({ message: "Payment not successful or verification failed" });
     }
 
-    // 1) Try to find commission by payment_attempts.tx_ref (preferred)
-    let commission = await Commission.findOne({ "payment_attempts.tx_ref": tx_ref });
-
-    // 2) fallback: check top-level tx_ref
+    // If commission wasn't found before (unlikely for a real tx), try finding it again now
     if (!commission) {
-      commission = await Commission.findOne({ tx_ref });
+      commission = await Commission.findOne({ "payment_attempts.tx_ref": tx_ref }) || await Commission.findOne({ tx_ref });
     }
 
     if (!commission) {
@@ -292,36 +359,7 @@ export const verifyCommissionPayment = async (req, res) => {
       return res.status(404).json({ message: "Commission not found for this transaction" });
     }
 
-    // 3) find attempt inside the commission (if any)
     let attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
-
-    if (!attempt) {
-      console.warn("Payment attempt missing for tx_ref:", tx_ref, "commission:", commission._id);
-      // we'll create one later if needed
-    }
-
-    // 4) determine partyType: prefer attempt.partyType, then Chapa meta
-    const partyType =
-      attempt?.partyType ||
-      (verifiedData.meta && (verifiedData.meta.partyType || verifiedData.meta.party_type)) ||
-      (verifiedData.meta && verifiedData.meta.partytype) ||
-      null;
-
-    // 5) If it was already processed, still return commission status so frontend shows success if paid
-    if (attempt?.status === 'paid') {
-      const populated = await Commission.findById(commission._id)
-        .populate("client_id", "firstName lastName")
-        .populate("owner_id", "firstName lastName")
-        .populate("broker_id", "firstName lastName")
-        .lean();
-
-      return res.status(200).json({
-        message: "Transaction already processed",
-        tx_ref,
-        status: commission.status,
-        commission: populated,
-      });
-    }
 
     // 6) Mark attempt as paid (or create record)
     if (attempt) {
@@ -384,7 +422,7 @@ export const verifyCommissionPayment = async (req, res) => {
       .lean();
 
     return res.status(200).json({
-      message: "Transaction verified successfully",
+      message: "Payment successfully done",
       tx_ref,
       status: commission.status,
       commission: populated,
@@ -427,8 +465,12 @@ export const handleWebhook = async (req, res) => {
 
     const tx_ref = event.tx_ref;
 
-    // 1. Find commission directly by tx_ref (no need for two queries)
-    const commission = await Commission.findOne({ tx_ref });
+    // 1. Find commission by payment_attempts (preferred) or tx_ref (fallback)
+    let commission = await Commission.findOne({ "payment_attempts.tx_ref": tx_ref });
+    if (!commission) {
+      commission = await Commission.findOne({ tx_ref });
+    }
+
     if (!commission) {
       console.error("Commission not found for tx_ref:", tx_ref);
       return res.status(404).send("Commission not found");
@@ -444,13 +486,14 @@ export const handleWebhook = async (req, res) => {
       return res.status(400).send("Unknown payer");
     }
 
-    // 3. Prevent double-spending
-    const alreadyPaid = partyType === 'client'
-      ? commission.client_payment_status === 'paid'
-      : commission.owner_payment_status === 'paid';
+    // 3. Check for specific attempt
+    let attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
+
+    // If attempt is already paid, skip logic
+    const alreadyPaid = attempt?.status === 'paid';
 
     if (alreadyPaid) {
-      console.log(`Duplicate: ${partyType} already paid`);
+      console.log(`Duplicate: ${partyType} already paid via tx_ref ${tx_ref}`);
       return res.status(200).send("Already processed");
     }
 
@@ -494,10 +537,19 @@ export const handleWebhook = async (req, res) => {
     }
 
     // 6. Update payment attempt inside the array
-    const attempt = commission.payment_attempts?.find(a => a.tx_ref === tx_ref);
     if (attempt) {
       attempt.status = 'paid';
       // attempt.completedAt = new Date();
+    } else {
+      // if not found in attempts (shouldn't happen if searched by attempt), add it
+      commission.payment_attempts = commission.payment_attempts || [];
+      commission.payment_attempts.push({
+        tx_ref,
+        partyType,
+        amount: event.amount, // from webhook event
+        status: 'paid',
+        initiatedAt: new Date()
+      });
     }
 
     await commission.save();

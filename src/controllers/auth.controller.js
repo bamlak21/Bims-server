@@ -185,6 +185,7 @@ export const AdminLogin = async (req, res) => {
       message: "admin logged in",
       email: admin.email,
       name: admin.name,
+      role:admin.role,
       token: token,
     });
   } catch (error) {

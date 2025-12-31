@@ -1,4 +1,4 @@
-import {Router} from 'express'
+import { Router } from 'express'
 import {
   GetBrokerCommissions,
   getCommissionById,
@@ -148,6 +148,7 @@ router.get("/getcommissionid", GetCommissionByListingId);
  */
 
 router.get("/broker", GetBrokerCommissions);
+router.get("/verify", verifyCommissionPayment);
 router.get("/:commissionId", getCommissionById);
 
 /**
@@ -297,7 +298,6 @@ router.post("/pay", PayCommission);
  *                   example: Internal Server Error
  */
 
-router.get("/verify", verifyCommissionPayment);
 router.patch(
   "/:commissionId/decision",
   AuthMiddleWare,

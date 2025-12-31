@@ -6,7 +6,7 @@ const TELEGRAM_REGEX = /(?:@|t\.me\/)[a-zA-Z0-9_]{5,}/g; // Username at least 5 
 const WHATSAPP_REGEX = /(?:wa\.me\/|whatsapp\.com\/send\?phone=)(?:\+?251|0)?[97]\d{8}/g;
 
 // Address keywords (Basic heuristic for common Ethiopian address patterns)
-const ADDRESS_REGEX = /\b(?:Addis Ababa|Subcity|Woreda|Kebele|House No|Bole|Arada|Yeka|Nifas Silk|Kirkos|Gullele|Lideta|Akaki|Kaliti)\b/gi;
+const ADDRESS_REGEX = /\b(?:Addis Ababa|Subcity|Woreda|Kebele|House No|Bole|Arada|Yeka|Nifas Silk|Kirkos|Gullele|Lideta|Akaki|Kaliti|Hossena|hossena|gombora|Gombora|hossana|Hossana|hosaina|Hosaina|Nigist Eleni|nigist eleni|Gofer Meda|Sefere Selam Park|Heto)\b/gi;
 
 const MASK_TEXT = "*** Contact sharing is restricted until deal confirmation";
 

@@ -21,7 +21,11 @@ export const fetchListing = async (req, res) => {
 
     const userId = req.user?._id || req.user?.id; // Current logged-in user
     const skip = (page - 1) * limit;
-    // const userType = req.user?.userType; 
+
+    // Ensure caller is an Admin for this specific fetch
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Unauthorized: Admin access required" });
+    }
 
 
 
@@ -119,6 +123,11 @@ export const RejectListing = async (req, res) => {
 
   if ((type !== "Vehicle" && type !== "Property") || !id) {
     return res.status(400).json({ message: "Required fields missing" });
+  }
+
+  // Ensure caller is an Admin
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ message: "Unauthorized: Admin access required" });
   }
 
   try {
@@ -537,6 +546,11 @@ export const systemHealth = async (req, res) => {
 
 
 export const fetchPendingListing = async (req, res) => {
+  // Ensure caller is an Admin
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ message: "Unauthorized: Admin access required" });
+  }
+
   try {
     const [properties, vehicles] = await Promise.all([
       Property.find({ status: "pending" }).populate("owner_id", "firstName lastName"),

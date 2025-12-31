@@ -8,6 +8,23 @@ if (!process.env.CHAPA_TOKEN) {
 }
 
 const Token = process.env.CHAPA_TOKEN;
+// Platform detection helper
+export const detectPlatform = (returnUrl) => {
+  if (!returnUrl) return 'web';
+
+  // App schemes detection
+  const appSchemes = ['bimsapp://', 'myapp://', 'exp://'];
+  return appSchemes.some(scheme => returnUrl.startsWith(scheme)) ? 'app' : 'web';
+};
+
+// Enhanced return URL handler
+export const generateReturnUrl = (platform, customUrl = null) => {
+  if (platform === 'app') {
+    return customUrl=`${process.env.APP_SCHEME || 'http://192.168.100.107:8081'}://payment-verification`;
+  }
+
+  return customUrl=`${process.env.WEB_URL || 'http://localhost:5173'}/verify-payment`;
+};
 
 const opt = {
   url: "",
@@ -28,7 +45,9 @@ export const initialization = async (
   partyType,
   commissionId,
   commission_type,
-  app_fee
+  app_fee,
+  platform = 'web',
+  webReturnUrl = null
 ) => {
   if (!phoneNumber || !amount || !tx_ref || !email) {
     console.error("Missing Required fields");
@@ -37,8 +56,8 @@ export const initialization = async (
   try {
     // Build a return_url that already contains both commission_id and tx_ref.
     // This prevents the provider from appending another `?` and producing a malformed querystring.
-    const returnUrlBase = "http://localhost:5173/verify-payment";
-    const return_url = `${returnUrlBase}?commission_id=${encodeURIComponent(commissionId)}&tx_ref=${encodeURIComponent(tx_ref)}`;
+    const returnUrlBase = webReturnUrl || `${process.env.WEB_URL || 'http://localhost:5173'}/verify-payment`;
+    const return_url = `${returnUrlBase.includes('?') ? returnUrlBase + '&' : returnUrlBase + '?'}commission_id=${encodeURIComponent(commissionId)}&tx_ref=${encodeURIComponent(tx_ref)}&platform=${platform}`;
 
     const reqBody = {
       first_name: firstName || "",
@@ -50,7 +69,7 @@ export const initialization = async (
       tx_ref: tx_ref,
       currency: "ETB",
       callback_url: process.env.CALLBACK_URL || `https://convivial-theressa-discordantly.ngrok-free.dev/api/commissions/webhook`,
-      return_url,
+      return_url, // Always a valid HTTP URL
       customization: {
         title: "BIMS Payment",
         description: `Paying as ${partyType}`,
@@ -62,7 +81,8 @@ export const initialization = async (
         userType,
         initiatedBy: userType,
         app_fee,
-        commission_type
+        commission_type,
+        platform, // Track which platform initiated payment
       }
     };
 
