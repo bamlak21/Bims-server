@@ -40,24 +40,25 @@ const PropertySchema = new mongoose.Schema(
       default: false,
     },
     needBroker: {
-  type: String,
-  enum: ["Yes", "No"],
-  required: true,
-  default: "No",
-},
+      type: String,
+      enum: ["Yes", "No"],
+      required: true,
+      default: "No",
+    },
     status: {
       type: String,
-      enum: ["pending", "assigned","broker_approved","broker_rejected","approved", "rejected", "sold"],
+      enum: ["pending", "assigned", "broker_approved", "broker_rejected", "approved", "rejected", "sold"],
       required: true,
     },
     rejection_reason: { type: String, default: "" },
     assignedVerifier: { type: Schema.Types.ObjectId, ref: "User", default: null },
     assignedAt: { type: Date },
+    verificationDeadline: { type: Date },
     verifiedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     verifiedAt: { type: Date },
     verificationComment: { type: String, default: "" },
   },
-  
+
   { timestamps: true }
 );
 

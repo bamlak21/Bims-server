@@ -6,6 +6,7 @@ import { User } from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import mongoose from "mongoose";
 import { Notifications } from "../models/notifications.model.js";
+import {Admin} from "../models/admin.model.js"
 
 export const CreateListing = async (req, res) => {
   const {
@@ -135,7 +136,7 @@ export const fetchListing = async (req, res) => {
     const {
       type = "all",
       page = 1,
-      limit = 10,
+      limit = 100,
       minPrice,
       maxPrice,
       category,
@@ -959,7 +960,7 @@ export const updateListing = async (req, res) => {
 
     // Notify admin about the listing update
     try {
-      const admin = await User.findOne({ userType: "admin" });
+      const admin = await Admin.findOne({ role:"admin" });
       if (admin) {
         await CreateNotification({
           userId: admin._id,

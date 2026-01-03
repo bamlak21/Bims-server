@@ -24,7 +24,9 @@ const NotificationSchema = new Schema(
         "new_user",
         "payment_reminder",
         "Verification_review",
-        "listing_updated"
+        "listing_updated",
+        "system_alert",
+        "broker_assignment_expired"
       ],
       required: true,
     },
@@ -50,7 +52,7 @@ const NotificationSchema = new Schema(
       enum: ["pending", "accepted", "declined"],
       default: "pending",
     },
-    amount:{type:Number},
+    amount: { type: Number },
     overdue: { type: Boolean, default: false }
   },
   { timestamps: true }

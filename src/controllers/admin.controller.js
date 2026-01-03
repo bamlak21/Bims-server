@@ -599,9 +599,21 @@ export const assignBrokerforVerification = async (req, res) => {
 
     listing.status = "assigned";
     listing.assignedVerifier = brokerId;
-    listing.assignedAt = new Date();
+    const assignedAt = new Date();
+    listing.assignedAt = assignedAt;
+    listing.verificationDeadline = new Date(assignedAt.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days from now
 
     await listing.save();
+
+    await CreateNotification({
+      userId: brokerId,
+      type: "assignment",
+      listingId: listing._id,
+      listingType: modelName,
+      message: `You have been assigned to verify the listing: ${listing.title}`,
+      action_required: true,
+      status: "pending"
+    });
 
     return res.json({
       message: "Broker assigned successfully",

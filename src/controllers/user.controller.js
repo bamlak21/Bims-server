@@ -124,7 +124,7 @@ export const getCurrentUserProfile = async (req, res) => {
     // DATA MASKING: Hide sensitive info if requester is not the profile owner
     let userData = user.toObject();
     const isOwnProfile = requestingUserId && String(requestingUserId) === String(id);
-    
+
     if (!isOwnProfile) {
       // HIDE sensitive fields from strangers
       delete userData.email;
@@ -228,10 +228,30 @@ export const deactivateUser = async (req, res) => {
 
 export const GetBrokers = async (req, res) => {
   try {
-    const brokers = await User.find({ userType: "broker" })
+    const { search = "", minRating = 0 } = req.query;
+
+    const filter = {
+      userType: "broker",
+      isBanned: { $ne: true },
+      isActive: { $ne: false }
+    };
+
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (minRating) {
+      filter.averageRating = { $gte: Number(minRating) };
+    }
+
+    const brokers = await User.find(filter)
       .select(
         "firstName lastName email phoneNumber socialLinks photo verified userType averageRating ratingCount"
       )
+      .sort({ averageRating: -1 })
       .lean();
 
     return res.status(200).json({ message: "Success", brokers });
@@ -508,11 +528,11 @@ export const sendverificationstatusforadmin = async (req, res) => {
 
       await CreateNotification({
         userId: admin._id,
-        type: "rejected",
+        type: "Verification_review",
         listingId: listing._id,
         listingType: listing.type,
         message: listing.rejection_reason,
-        status: "rejected",
+        status: "declined",
       });
     }
 

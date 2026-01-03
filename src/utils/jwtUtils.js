@@ -27,9 +27,10 @@ export const createAdminToken = (admin) => {
     id: admin.id,
     email: admin.email,
     name: admin.name,
-    role: "admin"
+    role: admin.role
   };
   return jwt.sign(payload, secret, { expiresIn: "10h" });
+
 };
 
 
