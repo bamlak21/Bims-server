@@ -12,7 +12,7 @@ export const fetchListing = async (req, res) => {
     const {
       type = "all",
       page = 1,
-      limit = 20,
+      limit = 100,
       minPrice,
       maxPrice,
       category,
@@ -237,6 +237,7 @@ export const getReports = async (req, res) => {
 
     const totalCommissions = totalCommissionsData.length > 0 ? totalCommissionsData[0].totalCommissions : 0;
 
+    // Calculate Commission App Fees
     const totalAppfeeData = await Commission.aggregate([
       { $match: { status: "paid" } },
       {
@@ -246,7 +247,24 @@ export const getReports = async (req, res) => {
         },
       },
     ]);
-    const totalapp_fee = totalAppfeeData.length > 0 ? totalAppfeeData[0].totalapp_fee : 0;
+    const commissionAppFee = totalAppfeeData.length > 0 ? totalAppfeeData[0].totalapp_fee : 0;
+
+    // Calculate Contact Payment Fees (from User model)
+    const totalContactFeeData = await User.aggregate([
+      { $unwind: "$contact_payments" },
+      { $match: { "contact_payments.payment_status": "paid" } },
+      {
+        $group: {
+          _id: null,
+          totalContactFee: { $sum: "$contact_payments.amount_paid" }
+        }
+      }
+    ]);
+    const contactAppFee = totalContactFeeData.length > 0 ? totalContactFeeData[0].totalContactFee : 0;
+
+    // Total App Fee = Commission Fees + Contact Fees
+    const totalapp_fee = commissionAppFee + contactAppFee;
+
     res.json({ monthlyRevenue, totalCommissions, totalapp_fee });
   } catch (err) {
     res.status(500).json({ message: err.message });

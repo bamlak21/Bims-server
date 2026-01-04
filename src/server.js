@@ -11,6 +11,7 @@ import dealsRouter from "./routes/deals.routes.js";
 import reportRoute from "./routes/report.routes.js";
 import chatRoute from "./routes/chat.routes.js";
 import ratingRouter from "./routes/rating.routes.js";
+import contactPaymentRouter from "./routes/contactPayment.routes.js"
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import { swaggerOptions } from "./config/swaggerConfig.js";
@@ -61,6 +62,8 @@ app.use("/api/user", userRouter);
 app.use("/api/listing", listingRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/commissions", commissionsRouter);
+console.log("Registering Contact Payment Routes...");
+app.use("/api/contact-payment", contactPaymentRouter);
 app.use("/api/deals", dealsRouter);
 app.use("/api/report", reportRoute);
 app.use("/api/chat", chatRoute);

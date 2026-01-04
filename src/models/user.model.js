@@ -68,6 +68,49 @@ const UserSchema = new Schema(
     loginLast: { type: Date, deafault: null },
     averageRating: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
+    contact_payments: [{
+      listing_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: 'listing_type',
+        required: true
+      },
+      listing_type: {
+        type: String,
+        enum: ['Property', 'Vehicle'],
+        required: true
+      },
+      payment_status: {
+        type: String,
+        enum: ['pending', 'paid', 'failed'],
+        default: 'pending'
+      },
+      tx_ref: {
+        type: String,
+        required: true,
+        unique: true,
+        sparse: true // Allow multiple null values but enforce uniqueness for non-null values
+      },
+      amount_paid: {
+        type: Number,
+        required: true
+      },
+      paid_at: {
+        type: Date,
+        default: null
+      },
+      created_at: {
+        type: Date,
+        default: Date.now
+      },
+      terms_accepted: {
+        type: Boolean,
+        default: false
+      },
+      terms_accepted_at: {
+        type: Date,
+        default: null
+      }
+    }],
   },
 
 

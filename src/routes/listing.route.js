@@ -15,7 +15,7 @@ import {
   updateListing,
 } from "../controllers/listing.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
-import { AuthMiddleWare } from "../middleware/auth.middleware.js";
+import { AuthMiddleWare, OptionalAuthMiddleWare } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -468,7 +468,7 @@ router.get("/fetchByStatus", fetchListingByStatus);
  *                   example: "Server error"
  */
 
-router.get("/fetchListing", fetchListingById);
+router.get("/fetchListing", OptionalAuthMiddleWare, fetchListingById);
 /**
  * @swagger
  * /api/listing/verify-listing:

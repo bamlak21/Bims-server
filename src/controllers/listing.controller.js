@@ -1,12 +1,13 @@
 import { Property } from "../models/property.model.js";
+import { User } from "../models/user.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { Deal } from "../models/deals.model.js";
+import { Commission } from "../models/commision.model.js";
 import { CreateNotification } from "../services/notificationService.js";
-import { User } from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import mongoose from "mongoose";
 import { Notifications } from "../models/notifications.model.js";
-import {Admin} from "../models/admin.model.js"
+import { Admin } from "../models/admin.model.js"
 
 export const CreateListing = async (req, res) => {
   const {
@@ -389,28 +390,105 @@ export const fetchListingById = async (req, res) => {
 
   try {
     const model = normalizedType === "Vehicle" ? Vehicle : Property;
-    const listing = await model
+    let listing = await model
       .findById(id)
       .populate("broker_id", "firstName lastName photo email phoneNumber")
       .populate("owner_id", "firstName lastName photo email phoneNumber")
       .lean();
 
-    if (listing && listing.location) {
-      listing.location = {
-        city: listing.location.city,
-        subcity: listing.location.subcity,
-        woreda: listing.location.woreda,
-        address: listing.location.address
-      };
+    if (!listing) {
+      return res.status(404).json({ message: "Listing not found" });
     }
-    console.log(listing);
 
-    return res.status(200).json({ message: "Success", listing });
+    // Check contact payment status
+    let contactAccessPaid = false;
+    let showContact = false;
+    const userId = req.user?.id || req.user?._id;
+
+    if (userId) {
+      // 1. Is user admin?
+      if (req.user.userType === 'admin') showContact = true;
+      // 2. Is user the owner?
+      else if (listing.owner_id && listing.owner_id._id.toString() === userId.toString()) showContact = true;
+      // 3. Is user the assigned broker?
+      else if (listing.broker_id && listing.broker_id._id.toString() === userId.toString()) showContact = true;
+      // 4. Has user paid the contact fee OR commission?
+      else {
+        const commission = await Commission.findOne({ listing_id: listing._id })
+          .select('client_id owner_id client_payment_status owner_payment_status');
+
+        if (commission) {
+          // Check if user is client who paid their share
+          if (commission.client_id?.toString() === userId.toString() &&
+            commission.client_payment_status === 'paid') {
+            showContact = true;
+          }
+          // Check if user is owner who paid their share
+          else if (commission.owner_id?.toString() === userId.toString() &&
+            commission.owner_payment_status === 'paid') {
+            showContact = true;
+          }
+        }
+
+        // ALWAYS check contact fee payment (200 ETB - for verification & trust building)
+        // This should run regardless of commission status to ensure contact access is granted
+        const user = await User.findById(userId);
+        const contactPayment = user.contact_payments?.find(
+          p => p.listing_id?.toString() === listing._id?.toString() &&
+            p.payment_status === 'paid'
+        );
+        contactAccessPaid = !!contactPayment;
+        if (contactAccessPaid) showContact = true; // Contact fee grants access
+      }
+    }
+
+    // Mask if not allowed
+    if (!showContact) {
+      listing.contactLocked = true;
+      // Mask Owner
+      if (listing.owner_id) {
+        listing.owner_id.phoneNumber = null;
+        listing.owner_id.email = null;
+      }
+      // Mask Broker
+      if (listing.broker_id) {
+        listing.broker_id.phoneNumber = null;
+        listing.broker_id.email = null;
+      }
+      // Mask Location Address
+      if (listing.location) {
+        listing.location = {
+          city: listing.location.city,
+          subcity: listing.location.subcity,
+          woreda: null, // Mask
+          address: null  // Mask
+        };
+      }
+    } else {
+      listing.contactLocked = false;
+      if (listing.location) {
+        listing.location = {
+          city: listing.location.city,
+          subcity: listing.location.subcity,
+          woreda: listing.location.woreda,
+          address: listing.location.address
+        };
+      }
+    }
+
+    return res.status(200).json({
+      message: "Success",
+      listing: {
+        ...listing,
+        contactAccessPaid
+      }
+    });
   } catch (err) {
     console.log(err);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const SetListingToBroker = async (req, res) => {
   const { listingId, broker_id, type } = req.query;
@@ -960,7 +1038,7 @@ export const updateListing = async (req, res) => {
 
     // Notify admin about the listing update
     try {
-      const admin = await Admin.findOne({ role:"admin" });
+      const admin = await Admin.findOne({ role: "admin" });
       if (admin) {
         await CreateNotification({
           userId: admin._id,

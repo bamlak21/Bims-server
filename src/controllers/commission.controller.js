@@ -8,6 +8,7 @@ import { CreateNotification } from '../services/notificationService.js'
 import { Property } from "../models/property.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { Admin } from "../models/admin.model.js";
+import { verifyContactPayment } from "../controllers/contactPayment.controller.js";
 
 export const GetCommissions = async (req, res) => {
   try {
@@ -458,6 +459,12 @@ export const handleWebhook = async (req, res) => {
     const commissionType = metadata.commission_type;
 
     console.log("Webhook received:", JSON.stringify(event, null, 2));
+
+    // Explicitly forward contact_access webhooks to contactPayment controller
+    if (commissionType === 'contact_access') {
+      console.log("Forwarding contact_access webhook to contactPayment controller...");
+      return verifyContactPayment(req, res);
+    }
 
     if (event.event !== "charge.success" || event.status !== "success" || !event.tx_ref) {
       return res.status(200).send("Ignored");

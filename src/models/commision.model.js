@@ -89,7 +89,7 @@ const CommissionSchema = new Schema({
   owner_paid_at: Date,
   commission_type: {
     type: String,
-    enum: ["broker_commission", "system_commission"],
+    enum: ["broker_commission", "system_commission","contact_access"],
     required: false,
   },
   app_fee: { type: Number, default: 0, },

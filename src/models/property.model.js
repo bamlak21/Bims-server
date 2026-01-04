@@ -57,6 +57,14 @@ const PropertySchema = new mongoose.Schema(
     verifiedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     verifiedAt: { type: Date },
     verificationComment: { type: String, default: "" },
+    contact_access_fee: { 
+      type: Number, 
+      default: 100 
+    },
+    contact_payment_required: { 
+      type: Boolean, 
+      default: true 
+    },
   },
 
   { timestamps: true }

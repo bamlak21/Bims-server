@@ -20,10 +20,10 @@ export const detectPlatform = (returnUrl) => {
 // Enhanced return URL handler
 export const generateReturnUrl = (platform, customUrl = null) => {
   if (platform === 'app') {
-    return customUrl=`${process.env.APP_SCHEME || 'http://192.168.100.107:8081'}://payment-verification`;
+    return customUrl = `${process.env.APP_SCHEME || 'http://192.168.100.107:8081'}://payment-verification`;
   }
 
-  return customUrl=`${process.env.WEB_URL || 'http://localhost:5173'}/verify-payment`;
+  return customUrl = `${process.env.WEB_URL || 'http://localhost:5173'}/verify-payment`;
 };
 
 const opt = {
@@ -47,17 +47,35 @@ export const initialization = async (
   commission_type,
   app_fee,
   platform = 'web',
-  webReturnUrl = null
+  webReturnUrl = null,
+  returnParams = null, // New parameter for custom return URL params
+  customCallbackUrl = null // New parameter for custom webhook URL
 ) => {
   if (!phoneNumber || !amount || !tx_ref || !email) {
     console.error("Missing Required fields");
   }
   const url = "https://api.chapa.co/v1/transaction/initialize";
   try {
-    // Build a return_url that already contains both commission_id and tx_ref.
-    // This prevents the provider from appending another `?` and producing a malformed querystring.
     const returnUrlBase = webReturnUrl || `${process.env.WEB_URL || 'http://localhost:5173'}/verify-payment`;
-    const return_url = `${returnUrlBase.includes('?') ? returnUrlBase + '&' : returnUrlBase + '?'}commission_id=${encodeURIComponent(commissionId)}&tx_ref=${encodeURIComponent(tx_ref)}&platform=${platform}`;
+
+    console.log("=== Chapa Initialization Debug ===");
+    console.log("returnParams received:", JSON.stringify(returnParams));
+    console.log("customCallbackUrl received:", customCallbackUrl);
+
+    // Construct return URL with flexible params
+    let return_url = returnUrlBase;
+    const separator = returnUrlBase.includes('?') ? '&' : '?';
+
+    if (returnParams) {
+      // Use provided custom params
+      const queryParams = new URLSearchParams(returnParams).toString();
+      return_url = `${returnUrlBase}${separator}${queryParams}`;
+    } else {
+      // Fallback to default behavior
+      return_url = `${returnUrlBase}${separator}commission_id=${encodeURIComponent(commissionId)}&tx_ref=${encodeURIComponent(tx_ref)}&platform=${platform}`;
+    }
+
+    console.log("Generated return_url:", return_url);
 
     const reqBody = {
       first_name: firstName || "",
@@ -68,7 +86,7 @@ export const initialization = async (
       amount: amount,
       tx_ref: tx_ref,
       currency: "ETB",
-      callback_url: process.env.CALLBACK_URL || `https://convivial-theressa-discordantly.ngrok-free.dev/api/commissions/webhook`,
+      callback_url: customCallbackUrl || process.env.CALLBACK_URL || `https://convivial-theressa-discordantly.ngrok-free.dev/api/commissions/webhook`,
       return_url, // Always a valid HTTP URL
       customization: {
         title: "BIMS Payment",
@@ -85,6 +103,8 @@ export const initialization = async (
         platform, // Track which platform initiated payment
       }
     };
+
+    console.log("Chapa Initialization Request Body:", JSON.stringify(reqBody, null, 2));
 
     opt.url = url;
 
