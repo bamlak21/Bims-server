@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { assignBrokerforVerification, fetchAllUsers, fetchListing, fetchPendingListing, getBrokerPerformance, getInsights, getListingGrowth, getOverview, getReports, getUserGrowth, RejectListing, systemHealth } from "../controllers/admin.controller.js";
+import { assignBrokerforVerification, fetchAllUsers, fetchListing, fetchPendingListing, getBrokerPerformance, getInsights, getListingGrowth, getOverview, getReports, getUserGrowth, RejectListing, systemHealth, getRecentContactPayments } from "../controllers/admin.controller.js";
 import { GetCommissions } from "../controllers/commission.controller.js";
 import { AuthMiddleWare } from "../middleware/auth.middleware.js";
 
@@ -70,5 +70,6 @@ router.get("/fetch", AuthMiddleWare, fetchListing);
 router.get("/pending-verification", AuthMiddleWare, fetchPendingListing)
 router.post("/:id/assign-verifier", assignBrokerforVerification);
 router.get("/get-all", fetchAllUsers);
+router.get("/contact-payments", AuthMiddleWare, getRecentContactPayments);
 
 export default router;

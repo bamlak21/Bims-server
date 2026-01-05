@@ -283,7 +283,7 @@ export const GetBrokerById = async (req, res) => {
 };
 
 export const GetBrokerAnalytics = async (req, res) => {
-  const { brokerId } = req.query;
+  const { brokerId, startDate, endDate } = req.query;
   const monthNames = [
     "",
     "January",
@@ -308,28 +308,48 @@ export const GetBrokerAnalytics = async (req, res) => {
     return res.status(400).json({ error: "Invalid broker_id" });
   }
 
-  try {
-    // Total listings
-    const vehicles = await Vehicle.countDocuments({ broker_id: brokerId });
-    const property = await Property.countDocuments({ broker_id: brokerId });
+try {
+    // Build date filter if provided
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) {
+        dateFilter.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        dateFilter.createdAt.$lte = new Date(endDate);
+      }
+    }
+
+    // Total listings with date filter
+    const vehicles = await Vehicle.countDocuments({ 
+      broker_id: brokerId,
+      ...(Object.keys(dateFilter).length > 0 && dateFilter)
+    });
+    const property = await Property.countDocuments({ 
+      broker_id: brokerId,
+      ...(Object.keys(dateFilter).length > 0 && dateFilter)
+    });
     const totalListing = vehicles + property;
 
-    // Total deals
+    // Total deals with date filter
     const totalDeals = await Deal.countDocuments({
       broker_id: brokerId,
       status: "completed",
+      ...(Object.keys(dateFilter).length > 0 && dateFilter)
     });
 
     // Success Rate
     const successRate =
       totalListing > 0 ? (totalDeals / totalListing) * 100 : 0;
 
-    // Total commission
+    // Total commission with date filter
     const totalCommissionEarnings = await Commission.aggregate([
       {
         $match: {
           broker_id: new mongoose.Types.ObjectId(brokerId),
-          status: "paid"
+          status: "paid",
+          ...(Object.keys(dateFilter).length > 0 && dateFilter)
         }
       },
       {
@@ -340,12 +360,13 @@ export const GetBrokerAnalytics = async (req, res) => {
       },
     ]);
 
-    // Monthly sold listings (deals)
+    // Monthly sold listings (deals) with date filter
     const monthlySoldListings = await Deal.aggregate([
       {
         $match: {
           broker_id: new mongoose.Types.ObjectId(brokerId),
           status: "completed",
+          ...(Object.keys(dateFilter).length > 0 && dateFilter)
         },
       },
       {
@@ -364,12 +385,13 @@ export const GetBrokerAnalytics = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // Monthly commissions
+    // Monthly commissions with date filter
     const monthlyCommissions = await Commission.aggregate([
       {
         $match: {
           broker_id: new mongoose.Types.ObjectId(brokerId),
-          status: "paid"
+          status: "paid",
+          ...(Object.keys(dateFilter).length > 0 && dateFilter)
         }
       },
       {
@@ -418,9 +440,12 @@ export const GetBrokerAnalytics = async (req, res) => {
           completed: await Deal.countDocuments({ broker_id: brokerId, status: "completed" }),
           cancelled: await Deal.countDocuments({ broker_id: brokerId, status: "cancelled" })
         },
-        commissionHistory: await Commission.find({ broker_id: brokerId })
+commissionHistory: await Commission.find({ 
+          broker_id: brokerId,
+          ...(Object.keys(dateFilter).length > 0 && dateFilter)
+        })
           .sort({ createdAt: -1 })
-          .limit(10)
+          .limit(50) // Increased limit for better date range coverage
           .lean()
           .then(cs => cs.map(c => ({
             id: c._id,

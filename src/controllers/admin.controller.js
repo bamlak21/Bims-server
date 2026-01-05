@@ -662,3 +662,37 @@ export const fetchAllUsers = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+export const getRecentContactPayments = async (req, res) => {
+  try {
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Unauthorized: Admin access required" });
+    }
+
+    const recentContactPayments = await User.aggregate([
+      { $unwind: "$contact_payments" },
+      { $match: { "contact_payments.payment_status": "paid" } },
+      { $sort: { "contact_payments.paid_at": -1 } },
+      { $limit: 10 },
+      {
+        $project: {
+          _id: "$contact_payments._id",
+          user_id: "$_id",
+          firstName: "$firstName",
+          lastName: "$lastName",
+          email: "$email",
+          listing_id: "$contact_payments.listing_id",
+          listing_type: "$contact_payments.listing_type",
+          amount_paid: "$contact_payments.amount_paid",
+          paid_at: "$contact_payments.paid_at",
+          tx_ref: "$contact_payments.tx_ref"
+        }
+      }
+    ]);
+
+    res.json(recentContactPayments);
+  } catch (err) {
+    console.error("Error fetching recent contact payments:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
